@@ -1,27 +1,12 @@
 from __future__ import print_function  # (at top of module)
-# import sys
-# import time
-# import timeit
-# from enum import IntEnum
-# import numpy as np
-# import random
-# import math
-# from scipy import special as scm
-# import scipy.spatial as sp
-# from scipy.stats import norm
-# from functools import reduce
-#
-# import contextlib
-# import pandas as pd
-# import matplotlib.pyplot as plt
-# import matplotlib.ticker as ptk
-# import matplotlib.patches as mpatches
 
+import math
 from .vsatype import *
 from .bsc import *
 from .tern import *
 from .ternzero import *
 from .hrr import *
+
 
 def get_hd_threshold(num_vecs):
     """
@@ -122,7 +107,7 @@ def to_vsa_type(sv, vsa_type):
     if sv.vsa_type == VsaType.TernZero:
         # We need to flip any zeros to a random 1 or -1
         v.vsa_type = VsaType.Tern
-        v = normalizeVector(v, len(sv))  # By Normalising as a VsaType.TERNARY we randomly flip 0's to 1 or -1
+        v = normalize(v, len(sv))  # By Normalising as a VsaType.TERNARY we randomly flip 0's to 1 or -1
         if vsa_type == VsaType.Tern:
             return VsaBase(v, vsa_type)
         elif vsa_type == VsaType.BSC:
@@ -152,40 +137,81 @@ def to_vsa_type(sv, vsa_type):
     raise ValueError
 
 
-def getRandVec(dims, word_size=8, vsa_type=VsaType.BSC):
+def randvec(dims, word_size=8, vsa_type=VsaType.BSC):
     """
-    :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector
-    :return: a single vector of 'dims' bits when shape is an int, otherwise as matrix of vectors.
+    :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.
+    :param word_size: numpy's word size parameter, e.g. for BSCs wordsize=8 becomes 'uint8'.
+    :param vsa_type: type of VSA subclass to create from VsaType class.
+    :return: a matrix of vectors of shape 'dims'.
     """
     subclass = VsaBase.get_subclass(vsa_type)
     if subclass:
-        return subclass.getRandVec(dims, word_size, vsa_type)
+        return subclass.randvec(dims, word_size, vsa_type)
     else:
         raise ValueError
 
 
-def normalizeVector(a, seqlength, Rv=None):
-    return a.normalizeVector(a, seqlength, Rv)
+def normalize(a, seqlength=None, rv=None):
+    """
+    Normalize the VSA vector
+    :param a: input VSA vector
+    :param seqlength: Optional, for BSC vectors must be set to a valid.
+    :param rv: Optional random vector, used for splitting ties on binary and ternary VSA vectors.
+    :return: new VSA vector
+    """
+    return a.normalize(a, seqlength, rv)
 
 
-def bind(a, b):  # actually bind/unbind for binary and ternary vecs
+def bind(a, b):
+    """
+    Comutative binding operator
+    :param a: VSA vec
+    :param b: VSA vec
+    :return: vector associating/coupling a to b that is dissimilar to both a and b.
+             In most cases bind(a, b) is analogues to multiplication, e.g. bind(3,4)=>12.
+             If we know one of the operands we can recover the other using unbind(a,b) e.g unbind(3,12)=>4
+    """
     if a.validate_operand(b):
         a1, b1 = VsaBase.trunc_vecs_to_same_len(a, b)
         return a.bind(a1, b1)
 
 
 def unbind(a, b):  # actually bind/unbind for binary and ternary vecs
+    """
+    Comutative unbinding operator. Decouples a from b and vice-versa. The result
+    :param a: VSA vec
+    :param b: VSA vec
+    :return: reverses a bind operation. If z = bind(x, y) then x = unbind(y, z) and y = unbind(x, z).
+             The return is orthogonal to x nd y if x and y have not been previously associated with bind(x, y).
+    """
     if a.validate_operand(b):
         a1, b1 = VsaBase.trunc_vecs_to_same_len(a, b)
         return a.unbind(a1, b1)
 
+
 def cosine(a, b):
+    """
+    :param a: vsa vector
+    :param b: vsa vector
+    :return: cosine distance between a and b, 0.0=exact match.
+    """
     if a.validate_operand(b):
         a1, b1 = VsaBase.trunc_vecs_to_same_len(a, b)
-        return sp.distance.cosine(a1, b1)
+        return a.cosine(a1, b1)
 
 
-def HDsim(a, b):
+def cosine_sim(a, b):
+    """
+    :param a: vsa vector
+    :param b: vsa vector
+    :return: cosine similarity between a and b. 1.0=exact match.
+    """
+    if a.validate_operand(b):
+        a1, b1 = VsaBase.trunc_vecs_to_same_len(a, b)
+        return a.cosine_sim(a1, b1)
+
+
+def hsim(a, b):
     """
     Returns hamming similarity between v1 and v2. This is equivalent to (1-hamming_distance)
     :param a:
@@ -194,4 +220,16 @@ def HDsim(a, b):
     """
     if a.validate_operand(b):
         a1, b1 = VsaBase.trunc_vecs_to_same_len(a, b)
-        return a.HDsim(a1, b1)
+        return a.hsim(a1, b1)
+
+
+def hdist(a, b):
+    """
+    Returns hamming similarity between v1 and v2. This is equivalent to (1-hamming_distance)
+    :param a:
+    :param b:
+    :return:
+    """
+    if a.validate_operand(b):
+        a1, b1 = VsaBase.trunc_vecs_to_same_len(a, b)
+        return a.hdist(a1, b1)

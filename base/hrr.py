@@ -1,9 +1,6 @@
-
-# import math
-# import numpy as np
 from functools import reduce
-
 from .vsatype import *
+
 
 class HRR(VsaBase):
     vsatype = VsaType.HRR
@@ -16,15 +13,25 @@ class HRR(VsaBase):
         return 'float'
 
     @classmethod
-    def getRandVec(cls, dims, word_size=8, vsa_type=VsaType.HRR):
+    def randvec(cls, dims, word_size=8, vsa_type=VsaType.HRR):
         """
-        :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector
-        :return: a single vector of 'dims' bits when shape is an int, otherwise as matrix of vectors.
+        :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.
+        :param word_size: numpy's word size parameter, e.g. for BSCs wordsize=8 becomes 'uint8'.
+        :param vsa_type: type of VSA subclass to create from VsaType class.
+        :return: a matrix of vectors of shape 'dims'.
         """
         return VsaBase(np.random.uniform(-1.0, 1.0, dims), vsa_type=VsaType.HRR)
 
     @classmethod
     def bind(cls, a, b):
+        """
+        Comutative binding operator
+        :param a: VSA vec
+        :param b: VSA vec
+        :return: vector associating/coupling a to b that is dissimilar to both a and b.
+                 In most cases bind(a, b) is analogues to multiplication, e.g. bind(3,4)=>12.
+                 If we know one of the operands we can recover the other using unbind(a,b) e.g unbind(3,12)=>4
+        """
         assert a.vsa_type == b.vsa_type, "Mismatch vsa_types"
         if a.vsa_type == VsaType.HRR and a.vsa_type == b.vsa_type:
             return cls.cconv(a, b)
@@ -32,26 +39,54 @@ class HRR(VsaBase):
 
     @classmethod
     def unbind(cls, a, b):
+        """
+        Comutative unbinding operator. Decouples a from b and vice-versa. The result
+        :param a: VSA vec
+        :param b: VSA vec
+        :return: reverses a bind operation. If z = bind(x, y) then x = unbind(y, z) and y = unbind(x, z).
+                 The return is orthogonal to x nd y if x and y have not been previously associated with bind(x, y).
+        """
         assert a.vsa_type == b.vsa_type, "Mismatch vsa_types"
         if b.vsa_type == VsaType.HRR:
             return cls.ccorr(a, b)
         raise ValueError("Mismatch vsa_types")
 
     @classmethod
-    def normalizeVector(cls, a, seqlength, Rv=None):
-        assert a.vsa_type == VsaType.HRR, "Mismatch vsa_types"
-        if a.vsa_type == VsaType.HRR:
-            return cls.normalize(a)
+    def normalize(cls, sv, seqlength=None, rv=None):
+        """
+        Normalize the VSA vector
+        :param a: input VSA vector
+        :param seqlength: not used
+        :param rv: Optional random vector, used for splitting ties on binary and ternary VSA vectors.
+        :return: new VSA vector
+        """
+        assert sv.vsa_type == VsaType.HRR, "Mismatch vsa_types"
+        if sv.vsa_type == VsaType.HRR:
+            """
+            Normalize a vector to length 1.
+            :param a: Vector
+            :return: a / len(a)
+            """
+            return sv / np.sum(sv ** 2.0) ** 0.5
         raise ValueError("Mismatch vsa_types")
 
+    @classmethod
+    def hdist(cls, a, b):
+        """
+        Cosine is used for hsim() for real number vectors
+        :param a: vsa vector
+        :param b: vsa vector
+        :return: cosine similarity between a and b. 0.0=exact match.
+        """
+        return cls.cosine(a, b)
 
     @classmethod
-    def HDsim(cls, a, b):
+    def hsim(cls, a, b):
         """
-        Returns hamming similarity between v1 and v2. This is equivalent to (1-hamming_distance)
-        :param a:
-        :param b:
-        :return:
+        Cosine is used for hsim() for real number vectors
+        :param a: vsa vector
+        :param b: vsa vector
+        :return: cosine similarity between a and b. 1.0=exact match.
         """
         assert a.vsa_type == a.vsa_type, "Mismatch vsa_types"
         if b.vsa_type == VsaType.HRR:
@@ -99,17 +134,3 @@ class HRR(VsaBase):
         with place vectors and adding them up.
         """
         return cls.normalize(reduce(lambda a, b: cls.cconv(a, p1) + cls.cconv(b, p2), l))
-
-    @classmethod
-    def getRandVec_C(cls, d):
-        # return VsaBase.normalize_C(np.random.randn(d) * d ** -0.5)
-        return VsaBase(np.random.uniform(-1.0, 1.0, d), VsaType.HRR)
-
-    @classmethod
-    def normalize(cls, a):
-        """
-        Normalize a vector to length 1.
-        :param a: Vector
-        :return: a / len(a)
-        """
-        return a / np.sum(a ** 2.0) ** 0.5

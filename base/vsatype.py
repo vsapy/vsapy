@@ -18,8 +18,7 @@ class VsaBase(np.ndarray):
 
     def __new__(cls, input_array, vsa_type, dtype=None):
         """
-        Create instance of appropriate subclass using path prefix.
-
+        Create instance of appropriate VsaBase subclass using vsa_type.
         :param input_array:
         :param vsa_type: subclass of VsaBase to be created from VsaType class
         :param dtype: numpy dtype
@@ -45,11 +44,9 @@ class VsaBase(np.ndarray):
         if obj is None: return
         self.vsa_type = getattr(obj, 'vsa_type', None)
 
-
     @classmethod
     def default_numpy_type(cls):
         """
-
         :return: Should return the default numpy datatype for this type of VSA, e.g., for Vsa.BSC return 'uint8'
         """
         raise NotImplementedError('Subclass must implment property "default_numpy_type()"')
@@ -82,12 +79,24 @@ class VsaBase(np.ndarray):
         raise NotImplementedError('Subclass must implment "validate_operand()"')
 
     @classmethod
-    def validate_operand(cls, v2):
-        assert v2.vsa_type == cls.vsatype, "Mismatch vsa_types"
-        return (v2.vsa_type == cls.vsatype)
+    def validate_operand(cls, b):
+        """
+        Ensure partner operand is of compatible 'vsatype'
+        :param b:
+        :return:
+        """
+        assert b.vsa_type == cls.vsatype, "Mismatch vsa_types"
+        return b.vsa_type == cls.vsatype
 
     @staticmethod
     def trunc_vecs_to_same_len(a, b):
+        """
+        Because VSA vectors are holgraphic we can compare vectors of different lengths.
+        this method ensures that paramters are of the same length by truncating to the shortest of the two.
+        :param a: VSA vector
+        :param b: VSA vector
+        :return: parms (a, b) truncated to match shortest vector.
+        """
         if len(a) == len(b):
             return a, b
         elif len(a) > len(b):
@@ -96,35 +105,75 @@ class VsaBase(np.ndarray):
             return a, b[:len(a)]
 
     @classmethod
-    def getRandVec(cls, dims, word_size=8, vsa_type=VsaType.BSC):
+    def randvec(cls, dims, word_size=8, vsa_type=VsaType.BSC):
         """
-
-        :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector
-        :param word_size: numpy's word size parameter, e.g. for BSCs wordsize=8 becomes 'uint8'
-        :param vsa_type: type of VSA subclass to create from VsaType class
-        :return: a single vector of 'dims' bits when shape is an int, otherwise as matrix of vectors.
+        :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.
+        :param word_size: numpy's word size parameter, e.g. for BSCs wordsize=8 becomes 'uint8'.
+        :param vsa_type: type of VSA subclass to create from VsaType class.
+        :return: a matrix of vectors of shape 'dims'.
         """
-        """
-        :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector
-        :return: a single vector of 'dims' bits when shape is an int, otherwise as matrix of vectors.
-        """
-
         raise NotImplementedError('Subclass must implment "validate_operand()"')
 
     @classmethod
-    def normalizeVector(cls, sv, seqlength, Rv=None):
+    def normalize(cls, sv, seqlength=None, rv=None):
+        """
+        Normalize the VSA vector
+        :param a: input VSA vector
+        :param seqlength: Optional, needed to normalise BSC vectors.
+        :param rv: Optional random vector, used for splitting ties on binary and ternary vectors.
+        :return: new VSA vector
+        """
         raise NotImplementedError('Subclass must implment "validate_operand()"')
 
     @classmethod
     def bind(cls, a, b):
+        """
+        Comutative binding operator
+        :param a: VSA vec
+        :param b: VSA vec
+        :return: vector associating/coupling a to b that is dissimilar to both a and b.
+                 In most cases bind(a, b) is analogues to multiplication, e.g. bind(3,4)=>12.
+                 If we know one of the operands we can recover the other using unbind(a,b) e.g unbind(3,12)=>4
+        """
         raise NotImplementedError('Subclass must implment "validate_operand()"')
 
     @classmethod
     def unbind(cls, a, b):
+        """
+        Comutative unbinding operator. Decouples a from b and vice-versa. The result
+        :param a: VSA vec
+        :param b: VSA vec
+        :return: reverses a bind operation. If z = bind(x, y) then x = unbind(y, z) and y = unbind(x, z).
+                 The return is orthogonal to x nd y if x and y have not been previously associated with bind(x, y).
+        """
         raise NotImplementedError('Subclass must implment "validate_operand()"')
 
     @classmethod
+    def hdist(cls, a, b):
+        """
+        :param a: vsa vector
+        :param b: vsa vector
+        :return: normalized hamming distance between a and b. 0.0=exact match.
+        """
+        raise NotImplementedError('Subclass must implment "validate_operand()"')
+
+    @classmethod
+    def hsim(cls, a, b):
+        """
+        :param a: vsa vector
+        :param b: vsa vector
+        :return: normalized hamming similarity between a and b. 1.0=exact match.
+        """
+        raise NotImplementedError('Subclass must implment "validate_operand()"')
+
+
+    @classmethod
     def cosine(cls, a, b):
+        """
+        :param a: vsa vector
+        :param b: vsa vector
+        :return: cosine distance between a and b, 0.0=exact match.
+        """
         if a.vsa_type == VsaType.Tern or a.vsa_type == VsaType.TernZero:
             assert b.vsa_type == VsaType.Tern or b.vsa_type == VsaType.TernZero, "Mismatch vsa_types"
         else:
@@ -132,12 +181,10 @@ class VsaBase(np.ndarray):
         return sp.distance.cosine(a, b)
 
     @classmethod
-    def HDsim(cls, a, b):
+    def cosine_sim(cls, a, b):
         """
-        Returns hamming similarity between v1 and v2. This is equivalent to (1-hamming_distance)
-        :param a:
-        :param b:
-        :return:
+        :param a: vsa vector
+        :param b: vsa vector
+        :return: cosine similarity between a and b. 1.0=exact match.
         """
-        raise NotImplementedError('Subclass must implment "validate_operand()"')
-
+        return 1.0 - cls.cosine(a, b)
