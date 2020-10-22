@@ -92,14 +92,16 @@ class Tern(VsaBase):
             else:
                 # For TernZero class, if there are zeros allowed in the array we can simulate the HDSim like below.
                 # Doing it this way means we keep the HDSim scale relative to BSC and Tern
-                # num_zeros = np.count_nonzero(x == 0)  # Count zeros in the array
-                # hd1 = np.count_nonzero(x == 1)  # Count 1's in the array
-                # hd1 = (hd1 + num_zeros * 0.5) / len(x)  # Add half of the don't care bits (zeros) to teh HDSim
+                num_zeros = np.count_nonzero(x == 0)  # Count zeros in the array
+                hd1 = np.count_nonzero(x == 1)  # Count 1's in the array
+                hd1 = (hd1 + num_zeros * 0.5) / len(x)  # Add half of the don't care bits (zeros) to teh HDSim
 
-                # An alternate maybe to do hamming distance on the active bits
-                num_minus1s = np.count_nonzero(x == -1)  # Count -1's in the array
-                num_ones = np.count_nonzero(x == 1)  # Count 1's in the array
-                hd1 = num_ones / (num_ones+num_minus1s)  # The active vector length is equal to num_ones + num_minus1s
+                #################################################################################################
+                # Note the alternate way shown below changes the TernZero HDSim scale relative to Tern and BSC
+                # making the HDSim value relatively higher whereas the method above matches the relative scales.
+                #    num_minus1s = np.count_nonzero(x == -1)  # Count -1's in the array
+                #    num_ones = np.count_nonzero(x == 1)  # Count 1's in the array
+                #    hd1 = num_ones / (num_ones+num_minus1s)  # The 'active vector length' = (num_ones + num_minus1s)
             return hd1
         raise ValueError
 
