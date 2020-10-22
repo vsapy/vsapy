@@ -7,8 +7,6 @@ HERE = pathlib.Path(__file__).parent
 # The text of the README file
 README = (HERE / "README.md").read_text()
 
-print("packages found", find_packages(exclude=("tests",)))  # see what packages are found using deb
-
 # This call to setup() does all the work
 setup(
     name="vsapy",
@@ -30,3 +28,6 @@ setup(
     install_requires=["numpy", "scipy"],
     entry_points={},
 )
+
+# Show me what packages where found
+print("packages found/included", find_packages(exclude=("tests",)))

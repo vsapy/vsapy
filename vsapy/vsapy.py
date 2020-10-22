@@ -108,7 +108,7 @@ def to_vsa_type(sv, vsa_type):
     if sv.vsa_type == VsaType.TernZero:
         # We need to flip any zeros to a random 1 or -1
         v.vsa_type = VsaType.Tern
-        v = normalize(v, len(sv))  # By Normalising as a VsaType.TERNARY we randomly flip 0's to 1 or -1
+        v = v.reset_zeros_normalize(v)  # By Normalising as a VsaType.TERNARY we randomly flip 0's to 1 or -1
         if vsa_type == VsaType.Tern:
             return VsaBase(v, vsa_type)
         elif vsa_type == VsaType.BSC:
