@@ -18,7 +18,10 @@ trunc_view = 10
 vd = 1000  # vector dimension
 for vt in VsaType:
     print()
-    v1 = vsa.randvec(vd, vsa_type=vt)
+    #v11 = vsa.randvec(vd, vsa_type=vt)
+    a = vsa.randvec(vd, vsa_type=vt)
+    b = vsa.randvec(vd, vsa_type=vt)
+    v1 = vsa.normalize(a+b, 2)
     for vtt in VsaType:
         try:
             t1 = vsa.to_vsa_type(v1, vsa_type=vtt)
@@ -57,6 +60,8 @@ for vt in VsaType:
         # Here we see calc expected_hd of an orthogonal vector because we don't know how to calc expected_hd
         expected_hd = "> {:0.4f} orthogonal vector".format(vsa.hsim(vsa.randvec(vd, vsa_type=VsaType.HRR), bag_vec))
 
+    if vt == VsaType.TernZero:
+        vt = vt
     print("{}:Binding {} sub-vectors into 'bag_vec'".format(vt.name, num_vecs))
     for v in vecs:
         print("\t{}: probe bag test hdsim(v{}, bag_vec)={:0.4f} {}".format(vt.name, i, vsa.hsim(v, bag_vec), expected_hd))
