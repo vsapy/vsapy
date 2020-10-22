@@ -8,9 +8,10 @@ HERE = pathlib.Path(__file__).parent
 README = (HERE / "README.md").read_text()
 
 # This call to setup() does all the work
+tst = find_packages(exclude=("tests",)),
 setup(
     name="vsapy",
-    version="0.1.0",
+    version="0.2.0",
     description="Vector Symbolic Architecture(VSA) library that allows building VSA apps that use variousl flavours of VSA vectors",
     long_description=README,
     long_description_content_type="text/markdown",
