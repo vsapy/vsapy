@@ -1,7 +1,3 @@
-from functools import reduce
-import numpy as np
-from scipy import special as scm
-import scipy.spatial as sp
 
 from .vsatype import *
 

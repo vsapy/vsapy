@@ -1,11 +1,12 @@
 from __future__ import print_function  # (at top of module)
 
-import math
 from .vsatype import *
 from .bsc import *
 from .tern import *
 from .ternzero import *
 from .hrr import *
+import math
+from scipy import special as scm
 
 
 def get_hd_threshold(num_vecs):

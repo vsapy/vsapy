@@ -7,11 +7,12 @@ HERE = pathlib.Path(__file__).parent
 # The text of the README file
 README = (HERE / "README.md").read_text()
 
+print("packages found", find_packages(exclude=("tests",)))  # see what packages are found using deb
+
 # This call to setup() does all the work
-tst = find_packages(exclude=("tests",)),
 setup(
     name="vsapy",
-    version="0.2.0",
+    version="0.3.0",
     description="Vector Symbolic Architecture(VSA) library that allows building VSA apps that use variousl flavours of VSA vectors",
     long_description=README,
     long_description_content_type="text/markdown",
