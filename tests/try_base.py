@@ -40,9 +40,9 @@ for vt in VsaType:
     v3 = vsa.bind(v1, v2)
     print("{}: bind test v3 = v1 * v2".format(vt.name))
     print("\t{}: bind test v1 not similar to v3, hdsim = {:0.4f}".format(vt.name, vsa.hsim(v1, v3)))
-    print("\t{}: bind test v2 not similar to v3, hdsim = {:0.4f}".format(vt.name, vsa.hsim(v1, v3)))
+    print("\t{}: bind test v2 not similar to v3, hdsim = {:0.4f}".format(vt.name, vsa.hsim(v2, v3)))
     print("\t{}: unbind test V2*v3->v1 = {:0.4f}".format(vt.name, vsa.hsim(v1, vsa.unbind(v2, v3))))
-    print("\t{}: unbind test V1*v2->v2 = {:0.4f}".format(vt.name, vsa.hsim(v1, vsa.unbind(v2, v3))))
+    print("\t{}: unbind test V1*v3->v2 = {:0.4f}".format(vt.name, vsa.hsim(v2, vsa.unbind(v1, v3))))
 
 
 # Test binding
