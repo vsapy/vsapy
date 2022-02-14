@@ -58,6 +58,9 @@ class BSC(VsaBase):
         :param rv: Optional random vector, used for splitting ties on binary and ternary VSA vectors.
         :return: new VSA vector
         """
+        if seqlength == 1:
+            return sv
+
         v = sv.copy()  # we don't want to change sv
         assert seqlength is not None, "You must specify the sequence length"
         if seqlength % 2 == 0:  # This will throw and error if seqlength=None. Forces parameter to be passed valid value
