@@ -875,6 +875,8 @@ if __name__ == '__main__':
             print(f"******ERROR: {e}")
 
         top_chunk = CSPvec.buildchunks(kk, acts, hierarchy_level, role_vecs)
+        if not os.path.exists(file_path):  # Make sure the output directory exists.
+            os.makedirs(file_path)  # Create output directory if not exists.
         serialise_vec_heirarchy(top_chunk, outfn)
         print(f"\n\n{kk.upper()} Time taken to build representation: {timeit.default_timer() - startTime}\n\n")
         del top_chunk  # Free up memory
