@@ -1,8 +1,12 @@
+import os
+from os.path import exists
+import pickle
 import datetime
 from enum import IntEnum
 import numpy as np
 import vsapy as vsa
 from .vsatype import VsaBase, VsaType
+from vsapy.helpers import serialise_object
 
 
 class TimeStamp(object):
@@ -90,14 +94,17 @@ class BagVec(PackedVec):
         if isinstance(veclist, np.ndarray):
             if len(veclist.shape) == 1:   # i.e. only 1D array
                 assert vec_cnt >= 1, "you must specify parameter 'vec_cnt': number of vectors in this vector."
-                return veclist, vec_cnt,  vsa.normalize(veclist, vec_cnt, )
+                rawvec = veclist  # veclist is a single [a1, a2, a3, ...] numpy column vector
+                return rawvec, vec_cnt,  vsa.normalize(veclist, vec_cnt, )
         elif isinstance(veclist, list):    # i.e. only 1D array
             if not isinstance(veclist[0], list):
                 assert vec_cnt >= 1, "you must specify parameter 'vec_cnt': number of vectors in this vector."
-                return veclist, vec_cnt,  vsa.normalize(veclist, vec_cnt, )
+                rawvec = veclist  # veclist is a single [a1, a2, a3, ...] python list vector
+                return rawvec, vec_cnt,  vsa.normalize(veclist, vec_cnt, )
         else:
             raise ValueError(" 'veclist' is not an array type.")
 
+        # veclist contains a list of vectors t be added.
         rawvec = np.sum(veclist, axis=0)
         if vec_cnt >= 1:
             # This enables passing in one or more un-normalized vectors in veclist. If vec_cnt >= 1 we assume that
@@ -125,9 +132,16 @@ class RawVec(BagVec):
         self.__rawvec = rawvec
 
 
-class BareChunk(BagVec):
+def serialise_vec_hierarchy(chunk_hierarchy, pathfn):
+    bare_hamlet = BareChunk(chunk_hierarchy)
+    serialise_object(bare_hamlet, pathfn)
+    return
+
+class BareChunk(RawVec):
     def __init__(self, cnk):
         super(BareChunk, self).__init__(cnk.rawvec, cnk.vec_cnt)
+        self.vsa_type = cnk.vsa_type
+        self.creation_data_time_stamp = cnk.creation_data_time_stamp
         self.aname = cnk.aname
         self.chunklist = [BareChunk(c) for c in cnk.chunklist] if not cnk.isTerminalNode else []
 
