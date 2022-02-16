@@ -1,4 +1,5 @@
 from vsapy.logger_utils import *
+from vsapy.bag import *
 from vsapy.helpers import *
 
 
