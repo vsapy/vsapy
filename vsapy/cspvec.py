@@ -5,45 +5,11 @@ import numpy as np
 import vsapy as vsa
 from .vsatype import VsaBase, VsaType
 from vsapy.bag import *
+from vsapy.role_vectors import *
+from vsapy.helpers import deserialise_object
 
 from vsapy.logger_utils import *
 log = setuplogs(level='INFO')
-
-
-class RoleVecs(object):
-    next_chunk_id = 0 # Used for debug to identify a particular chunk.
-
-    def __init__(self, veclen, creation_data_time_stamp=None):
-        if creation_data_time_stamp is None:
-            self.creation_data_time_stamp = TimeStamp.get_creation_data_time_stamp()
-        else:
-            self.creation_data_time_stamp = creation_data_time_stamp
-
-        self.id_stamp = "NOT SET"
-
-        if "NOT SET" in self.id_stamp:
-            self.id_stamp = self.creation_data_time_stamp
-
-        self.role_data = vsa.randvec(veclen)
-        self.role_match_message = vsa.randvec(veclen)  # The random alphanumeric match-tag used in workflow requests
-
-        self.role_id = vsa.randvec(veclen)  # The responder's vector id used in match replies to differentiate between
-                                            # responders in a workflow request
-                                            # (this is as an alternative to self.role_match_message)
-
-        self.role_jobid = vsa.randvec(veclen)  # The senders job-id in a workflow request
-        self.role_matchval = vsa.randvec(veclen)  # The hsim match quality in a reply msg
-        self.role_vec_count = vsa.randvec(veclen)  # The number of vecs embedded in this vector
-        self.role_stopvec = vsa.randvec(veclen)  # The chunk stop vector
-        self.permVecs = tuple([vsa.randvec(veclen) for _ in range(150)])
-        self.role_parent = vsa.randvec(veclen)  # Used in DAG encoding
-        self.role_child = vsa.randvec(veclen)  # Used in DAG encoding
-        # -------------------------------------------------------------------------
-        self.role_tvec_tag = vsa.randvec(veclen)  # Tvec POSITION-Role-vector
-
-        self.role_current_reqstate = vsa.randvec(veclen)
-        self.role_current_pindex = vsa.randvec(veclen)
-        self.role_pindex_numeric_base = vsa.randvec(veclen)
 
 
 class CSPvec(RawVec):
@@ -63,13 +29,10 @@ class CSPvec(RawVec):
 
     def __init__(self, name, veclist, level, role_vecs, maxvecs=32, chunks=None, creation_data_time_stamp=None):
 
-        if creation_data_time_stamp is None:
-            self.creation_data_time_stamp = TimeStamp.get_creation_data_time_stamp()
-        else:
-            self.creation_data_time_stamp = creation_data_time_stamp
+        self.creation_data_time_stamp = role_vecs.creation_data_time_stamp
 
-        if "NOT SET" in CSPvec.id_stamp:  # This means class vars have never been initialised
-            CSPvec.id_stamp = self.creation_data_time_stamp
+        # if "NOT SET" in CSPvec.id_stamp:  # This means class vars have never been initialised
+        #     CSPvec.id_stamp = self.creation_data_time_stamp
 
         self.im_the_requester = False  # Service owning this vector is the requester
         self.aname = name
@@ -262,7 +225,7 @@ class CSPvec(RawVec):
         return invec1
 
 
-    def get_start_vec(self, seq_posn, im_the_requester=False, target_chan=1, position_request= None):
+    def as_seq(self, seq_posn, im_the_requester=False, target_chan=1, position_request= None):
 
         self.im_the_requester = im_the_requester
 
