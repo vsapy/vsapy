@@ -266,7 +266,7 @@ class VsaTokenizer(object):
         v = None
         try:
             if self.use_word2vec:
-                v = self.get_word2Vec(self, w)
+                v = self.get_word2Vec(w)
 
             if v is None:
                 v = self.createWordVector(w).myvec
