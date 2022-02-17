@@ -795,9 +795,9 @@ if __name__ == '__main__':
     #
     # I have removed the nltk versions from runlist until I write up how to install nltk and its components.
     # -----------------------------------------------------------------------------------------------
-    # runlist = [('hamlet_orig', 'data/source_files/hamlet_stanzas.json', f'{file_path}/hamlet_stanzas_{word_format}.bin', buildacts_from_json),
-    #            ('nofear_old', actdict_old, f'{file_path}/hamlet_old_{word_format}.bin', buildacts_from_csv),
-    #            ('nofear_new', actdict_new, f'{file_path}/hamlet_new_{word_format}.bin', buildacts_from_csv)]
+    runlist = [('hamlet_orig', 'data/source_files/hamlet_stanzas.json', f'{file_path}/hamlet_stanzas_{word_format}.bin', buildacts_from_json),
+               ('nofear_old', actdict_old, f'{file_path}/hamlet_old_{word_format}.bin', buildacts_from_csv),
+               ('nofear_new', actdict_new, f'{file_path}/hamlet_new_{word_format}.bin', buildacts_from_csv)]
 
 
     # my_r2b = Real2Binary(300, 10000, seed=951753)
