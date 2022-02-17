@@ -13,7 +13,7 @@ from vsapy.helpers import *
 
 
 class RoleVecs(object):
-    next_chunk_id = 0 # Used for debug to identify a particular chunk.
+    next_chunk_id = 0  # Used for debug to identify a particular chunk.
     symbols = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.;:,_'!?-[]&*"
 
     def __init__(self, veclen, random_seed=None, creation_data_time_stamp=None):
@@ -35,23 +35,23 @@ class RoleVecs(object):
         self.symbol_dict = createSymbolVectors(RoleVecs.symbols, veclen, creation_data_time_stamp=creation_data_time_stamp)
         self.num_dict = create_base_vecs("0", "9", veclen, True, creation_data_time_stamp=creation_data_time_stamp)
 
-        self.role_match_message = vsa.randvec(veclen)  # The random alphanumeric match-tag used in workflow requests
+        self.match_message = vsa.randvec(veclen)  # The random alphanumeric match-tag used in workflow requests
 
-        self.role_id = vsa.randvec(veclen)  # The responder's vector id used in match replies to differentiate between
+        self.id = vsa.randvec(veclen)  # The responder's vector id used in match replies to differentiate between
                                             # responders in a workflow request
                                             # (this is as an alternative to self.role_match_message)
 
-        self.role_jobid = vsa.randvec(veclen)  # The senders job-id in a workflow request
-        self.role_matchval = vsa.randvec(veclen)  # The hsim match quality in a reply msg
-        self.role_vec_count = vsa.randvec(veclen)  # The number of vecs embedded in this vector
-        self.role_stopvec = vsa.randvec(veclen)  # The chunk stop vector
+        self.jobid = vsa.randvec(veclen)  # The senders job-id in a workflow request
+        self.matchval = vsa.randvec(veclen)  # The hsim match quality in a reply msg
+        self.vec_count = vsa.randvec(veclen)  # The number of vecs embedded in this vector
+        self.stopvec = vsa.randvec(veclen)  # The chunk stop vector
         self.permVecs = tuple([vsa.randvec(veclen) for _ in range(150)])
-        self.role_parent = vsa.randvec(veclen)  # Used in DAG encoding
-        self.role_child = vsa.randvec(veclen)  # Used in DAG encoding
+        self.parent = vsa.randvec(veclen)  # Used in DAG encoding
+        self.child = vsa.randvec(veclen)  # Used in DAG encoding
         # -------------------------------------------------------------------------
-        self.role_tvec_tag = vsa.randvec(veclen)  # Tvec POSITION-Role-vector
-        self.role_current_pindex = vsa.randvec(veclen)
-        self.role_pindex_numeric_base = vsa.randvec(veclen)  # Used when representing numbers as a cyclic-shifted vec
+        self.tvec_tag = vsa.randvec(veclen)  # Tvec POSITION-Role-vector
+        self.current_pindex = vsa.randvec(veclen)
+        self.pindex_numeric_base = vsa.randvec(veclen)  # Used when representing numbers as a cyclic-shifted vec
 
 
 # From initialisation we want certain values to agree across all instances of these vector modules

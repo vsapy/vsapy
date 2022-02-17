@@ -66,7 +66,7 @@ class CSPvec(RawVec):
         # to detect that the next vector is a stop vector.
         # The spinoff benefit is that we get better matches because vector lists ending in the same
         # vector will not differ by the stop vector.
-        self.stopvec = vsa.bind(self.roles.role_stopvec, np.roll(veclist[-1], 1))
+        self.stopvec = vsa.bind(self.roles.stopvec, np.roll(veclist[-1], 1))
         if self.isTerminalNode:
             # we are creating a basic compound vector these do not need a stop vector, however if the number of vectors
             # to be added is even we add one enyway to make the majority vote work niceley
@@ -85,7 +85,7 @@ class CSPvec(RawVec):
             # If we are a terminal node we will never look for our own stop_vec, however we do want to detect the
             # parent vectors stop_vec.  We therefore recalc the stop_vec to match with any parent vectors
             # stop_vec should 'this' vec be last in the list.
-            self.stopvec = vsa.bind(self.roles.role_stopvec, np.roll(self.myvec, 1))
+            self.stopvec = vsa.bind(self.roles.stopvec, np.roll(self.myvec, 1))
     
 
     def addvecs(self, veclist):
@@ -229,8 +229,8 @@ class CSPvec(RawVec):
 
         sub_vecs = [
             self.rawvec,
-            self.roles.role_tvec_tag,
-            np.roll(self.roles.role_vec_count, vec_count),
+            self.roles.tvec_tag,
+            np.roll(self.roles.vec_count, vec_count),
         ]
 
         bagvec = BagVec(sub_vecs, vec_count)
@@ -247,7 +247,7 @@ class CSPvec(RawVec):
         if myvec is None:
             return 0, invec, -1
 
-        match = vsa.randvec(invec, myvec)
+        match = vsa.hsim(invec, myvec)
         # TODO: change check to match the current threshold requiements - this will give us some speed up.
         if match < required_threshhold:
             return match, invec, -1, invec
@@ -260,7 +260,7 @@ class CSPvec(RawVec):
         if self.check_for_start_tag_vec(invec):
             return -1
         pindex = 0
-        pvec = self.roles.role_tvec_tag.copy()
+        pvec = self.roles.tvec_tag.copy()
         for p in self.roles.permVecs:
             pvec = np.roll(vsa.bind(pvec, np.roll(p, pindex)), -1)
             hd = vsa.hsim(pvec, invec)
@@ -346,7 +346,7 @@ class CSPvec(RawVec):
 
         i = 0
         for i in range(stop_at):
-            if vsa.randvec(np.roll(role_vec, i), datavec) >= CSPvec.trace_threshold:
+            if vsa.hsim(np.roll(role_vec, i), datavec) >= CSPvec.trace_threshold:
                 break
 
         return i
@@ -360,7 +360,7 @@ class CSPvec(RawVec):
         return vsa.hsim(self.stopvec, invec) > CSPvec.trace_thresholds[0]
 
     def check_for_start_tag_vec(self, invec):
-        return vsa.hsim(self.roles.role_tvec_tag, invec) > CSPvec.trace_thresholds[0]
+        return vsa.hsim(self.roles.tvec_tag, invec) > CSPvec.trace_thresholds[0]
 
     def flattenchunkheirachy(self, allchunks, skip_worker_chunks=False):
         if self.isTerminalNode:
