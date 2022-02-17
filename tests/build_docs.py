@@ -181,17 +181,17 @@ class word_tracker(object):
         pass
 
 class VsaTokenizer(object):
-    def __init__(self, role_vecs, usechunksforwords=True,
-                 allow_skip_words=False, skip_words=None, skip_word_critereon=None,
+    def __init__(self, role_vecs, _usechunksforwords=True,
+                 allow_skip_words=False, skip_words=None, skip_word_criterion=None,
                  use_word2vec=False, word2Vec_model=None, my_r2b=None):
 
         """
 
         :param symbol_dict:
-        :param usechunksforwords:
+        :param _usechunksforwords:
         :param allow_skip_words:
         :param skip_words:
-        :param skip_word_critereon: function returning bool indicates whether to skip this word, can pass as a lambda
+        :param skip_word_criterion: function returning bool indicates whether to skip this word, can pass as a lambda
         :param use_word2vec:
         :param word2Vec_model:
         :param my_r2b:
@@ -200,11 +200,16 @@ class VsaTokenizer(object):
         self.symbol_dict = role_vecs.symbol_dict
         self.use_word2vec = use_word2vec
         self.miss_from_word2vec = {}
+        self.linecheck = []  # Used for debug to check vsa unbinding replays. Allows us to check if the unbinding
+                             # reproduces the same document lines as were built duing encoding.
+        self.total_word_count = 0  # Used to count the total number of words seen by the tokenizer
+                                   # Reset this before starting a new document.
+
         if use_word2vec:
             assert word2Vec_model is not None, "you must supply a word2vec model"
             assert my_r2b is not None, "you must supply a RealToBinary converter"
         else:
-            self.model = None # word to vec model
+            self.model = None  # word to vec model
             self.my_r2b = None  # real to binary converter
 
         self.allow_skips = allow_skip_words
@@ -214,11 +219,12 @@ class VsaTokenizer(object):
         else:
             self.skip_words = {}
 
-        self.meets_skip_words_critereon = skip_word_critereon
+        self.meets_skip_words_criterion = skip_word_criterion
 
         self.seen_words = {}  # Tracks seen words so they do not need to be rebuilt
 
-        if usechunksforWords:
+        self.usechunksforwords = _usechunksforwords
+        if _usechunksforwords:
             self.createWordVector = self.chunkWordVector  # Using our own chunking scheme, allows individual words as services
         else:
             self.createWordVector = self.gb_wordvector_as_chunk  # Graham's piBinding - faster
@@ -226,14 +232,14 @@ class VsaTokenizer(object):
     def chunkWordVector(self, word):
         lettervecs = [self.symbol_dict[a] for a in word]
 
-        cnk = CSPvec(word, lettervecs, -1, self.role_vecs)
-        if usechunksforWords:
-            linecheck.append(word)  # record the word for verification
+        cnk = CSPvec(word, lettervecs, self.role_vecs)
+        if self.usechunksforwords:
+            self.linecheck.append(word)  # record the word for verification
 
         return cnk
 
     def gb_wordvector_as_chunk(self, word):
-        return CSPvec(word, [self.createWordVector_GB(word)], -1, self.role_vecs)
+        return CSPvec(word, [self.createWordVector_GB(word)], self.role_vecs)
 
     def createWordVector_GB(self, word):
         v = self.symbol_dict[word[0]]
@@ -286,7 +292,7 @@ class VsaTokenizer(object):
         '''
         v = None
         try:
-            if self.allow_skips and (w in self.skip_words or self.meets_skip_words_critereon(w)):
+            if self.allow_skips and (w in self.skip_words or self.meets_skip_words_criterion(w)):
                 if w not in self.skip_words:
                     self.skip_words[w] = PackedVec(self.get_word_vector(w))
                 return None
@@ -306,7 +312,6 @@ class VsaTokenizer(object):
         return v
 
     def chunkSentenceVector(self, sentence1):
-        global total_word_count
 
         db_sentence = None
         wordvecs = []
@@ -322,15 +327,15 @@ class VsaTokenizer(object):
 
                 vec = self.get_or_skip_word_vector(w)
                 if vec is not None:
-                    total_word_count += 1
-                    wordvecs.append(CSPvec(w, [vec], -1, self.role_vecs))
+                    self.total_word_count += 1
+                    wordvecs.append(CSPvec(w, [vec], self.role_vecs))
 
             if len(wordvecs) == 0:
                 wordvecs = wordvecs  # For Debug
                 return None
             else:
                 try:
-                    db_sentence = CSPvec.buildchunks(sentence, wordvecs, hierarchy_level, self.role_vecs,
+                    db_sentence = CSPvec.buildchunks(sentence, wordvecs, self.role_vecs,
                                                      split_tail_evenly=True, rebuild_names=True)
                 except [ValueError, IndexError] as e:
                     print(e)
@@ -455,16 +460,12 @@ def buildactdicts(filename):
 
 
 def buildacts_from_csv(actdict, vsa_tok, no_acts=10000, no_scenes_per_act=10000, report_input_lines=True):
-    global linecheck
     scenes = []
     acts = []
     scene_cnt = no_scenes_per_act
     act_cnt = no_acts
 
-    linecheck = []
     lcnt = 1
-    hierarchy_level = [0]  # This is used to maintain hierarchy level
-
     for act_name, act in actdict:
         act_name = act_name.replace("\n", "").strip()
         print("\n\n", act_name)
@@ -474,7 +475,6 @@ def buildacts_from_csv(actdict, vsa_tok, no_acts=10000, no_scenes_per_act=10000,
             print("\n\t", scene_name)
             # lcnt = 1
             lineVecs = []
-            hierarchy_level = [0]  # Lines are at level 0, ATM we need this to get an 'action' service to terminate
             sid = -1
             for actor, detail in scene:
                 sid += 1
@@ -492,7 +492,7 @@ def buildacts_from_csv(actdict, vsa_tok, no_acts=10000, no_scenes_per_act=10000,
                         else:
                             lineVecs.append(v)
 
-            thisscene = CSPvec.buildchunks(act_name + "_" + scene_name, lineVecs, hierarchy_level, vsa_tok.role_vecs)
+            thisscene = CSPvec.buildchunks(act_name + "_" + scene_name, lineVecs,  vsa_tok.role_vecs)
             scenes.append(thisscene)
             scene_cnt -= 1
             if scene_cnt == 0:
@@ -500,12 +500,12 @@ def buildacts_from_csv(actdict, vsa_tok, no_acts=10000, no_scenes_per_act=10000,
                 break  # to build less scenes per act
 
         # scenes combine to make acts
-        thisact = CSPvec.buildchunks(act_name, scenes, hierarchy_level, vsa_tok.role_vecs)
+        thisact = CSPvec.buildchunks(act_name, scenes, vsa_tok.role_vecs)
         acts.append(thisact)
         act_cnt -= 1
         if act_cnt == 0:
             break  # All acts have been built
-    return acts, scenes, linecheck
+    return acts, scenes, vsa_tok.linecheck
 
 
 def buildacts_from_json(_play, vsa_tok, no_acts=10000, no_scenes_per_act=10000, report_input_lines=True):
@@ -520,9 +520,7 @@ def buildacts_from_json(_play, vsa_tok, no_acts=10000, no_scenes_per_act=10000, 
     scene_cnt = no_scenes_per_act
     act_cnt = no_acts
 
-    linecheck = []
     lcnt = 1
-    hierarchy_level = [0]  # This is used to maintain hierarchy level
 
     for act_name, act in sorted(iteritems(play)):
         act_name = act_name.replace("\n", "").strip()
@@ -534,7 +532,6 @@ def buildacts_from_json(_play, vsa_tok, no_acts=10000, no_scenes_per_act=10000, 
                 scene_name = scene_name.replace("\n", "").strip()
                 print("\n\t", scene_name)
                 lineVecs = []
-                hierarchy_level = [0]  # Lines are at level 0, ATM we need this to get an 'action' service to terminate
                 for sid, detail in sorted(iteritems(scene), key=lambda xyz: get_key(xyz[0])):
                     lines = detail['line'].replace('--', '-')  # we don't want to keep '--' within the stanza
                     lines = fixup_chars(lines)
@@ -556,7 +553,7 @@ def buildacts_from_json(_play, vsa_tok, no_acts=10000, no_scenes_per_act=10000, 
                     # if lcnt > 3:
                     #    break
 
-                thisscene = CSPvec.buildchunks(act_name + "_" + scene_name, lineVecs, hierarchy_level, vsa_tok.role_vecs)
+                thisscene = CSPvec.buildchunks(act_name + "_" + scene_name, lineVecs, vsa_tok.role_vecs)
                 scenes.append(thisscene)
                 scene_cnt -= 1
                 if scene_cnt == 0:
@@ -564,13 +561,13 @@ def buildacts_from_json(_play, vsa_tok, no_acts=10000, no_scenes_per_act=10000, 
                     break  # to build less scenes per act
 
         # scenes combine to make acts
-        thisact = CSPvec.buildchunks(act_name, scenes, hierarchy_level, vsa_tok.role_vecs)
+        thisact = CSPvec.buildchunks(act_name, scenes, vsa_tok.role_vecs)
         acts.append(thisact)
         act_cnt -= 1
         if act_cnt == 0:
             break  # All acts have been built
 
-    return acts, scenes, linecheck
+    return acts, scenes, vsa_tok.linecheck
 
 
 def buildacts_from_nltk_xml(fname, vsa_tok, no_acts=10000, no_scenes_per_act=10000, report_input_lines=True):
@@ -579,9 +576,7 @@ def buildacts_from_nltk_xml(fname, vsa_tok, no_acts=10000, no_scenes_per_act=100
     scene_cnt = no_scenes_per_act
     act_cnt = no_acts
 
-    linecheck = []
     lcnt = 1
-    hierarchy_level = [0]  # This is used to maintain hierarchy level
 
     with open(fname, 'rb') as myfile:
         d = xml.parse(myfile)
@@ -633,7 +628,7 @@ def buildacts_from_nltk_xml(fname, vsa_tok, no_acts=10000, no_scenes_per_act=100
                     # if lcnt > 3:
                     #    break
 
-                thisscene = CSPvec.buildchunks(act_name + "_" + scene_name, lineVecs, hierarchy_level, vsa_tok.role_vecs)
+                thisscene = CSPvec.buildchunks(act_name + "_" + scene_name, lineVecs, vsa_tok.role_vecs)
                 scenes.append(thisscene)
                 scene_cnt -= 1
                 if scene_cnt == 0:
@@ -641,13 +636,13 @@ def buildacts_from_nltk_xml(fname, vsa_tok, no_acts=10000, no_scenes_per_act=100
                     break  # to test just one scene
 
         # scenes combine to make acts
-        thisact = CSPvec.buildchunks(act_name, scenes, hierarchy_level, vsa_tok.role_vecs)
+        thisact = CSPvec.buildchunks(act_name, scenes, vsa_tok.role_vecs)
         acts.append(thisact)
         act_cnt -= 1
         if act_cnt == 0:
             break  # All acts have been built
 
-    return acts, scenes, linecheck
+    return acts, scenes, vsa_tok.linecheck
 
 
 if __name__ == '__main__':
@@ -800,9 +795,9 @@ if __name__ == '__main__':
     #
     # I have removed the nltk versions from runlist until I write up how to install nltk and its components.
     # -----------------------------------------------------------------------------------------------
-    runlist = [('hamlet_orig', 'data/source_files/hamlet_stanzas.json', f'{file_path}/hamlet_stanzas_{word_format}.bin', buildacts_from_json),
-               ('nofear_old', actdict_old, f'{file_path}/hamlet_old_{word_format}.bin', buildacts_from_csv),
-               ('nofear_new', actdict_new, f'{file_path}/hamlet_new_{word_format}.bin', buildacts_from_csv)]
+    # runlist = [('hamlet_orig', 'data/source_files/hamlet_stanzas.json', f'{file_path}/hamlet_stanzas_{word_format}.bin', buildacts_from_json),
+    #            ('nofear_old', actdict_old, f'{file_path}/hamlet_old_{word_format}.bin', buildacts_from_csv),
+    #            ('nofear_new', actdict_new, f'{file_path}/hamlet_new_{word_format}.bin', buildacts_from_csv)]
 
 
     # my_r2b = Real2Binary(300, 10000, seed=951753)
@@ -810,32 +805,30 @@ if __name__ == '__main__':
         "role_vecs": "role_vectors.bin",
     }
     role_vec_data = create_role_data(data_files, vec_len=10000, rand_seed=123)
-    vsa_tok = VsaTokenizer(role_vec_data,  usechunksforWords,
+    vsa_tok = VsaTokenizer(role_vec_data, usechunksforWords,
                            allow_skip_words=allow_word_skip, skip_words=skip_words,
-                           skip_word_critereon=lambda w: False)  # In this case, the lambda is just disabling skip_words
+                           skip_word_criterion=lambda w: False)  # In this case, the lambda is just disabling skip_words
 
     docs = []
     run_log = []
-    linecheck = []
     for kk, infn, outfn, parse_func in runlist:
         startTime = timeit.default_timer()
         try:
-            total_word_count = 0
+            vsa_tok.total_word_count = 0
             miss_from_word2vec.clear()
-            linecheck.clear()
-            hierarchy_level = [0]
+            vsa_tok.linecheck.clear()
             acts, scenes, linecheck = parse_func(infn, vsa_tok,
                                                  no_acts=no_acts,
                                                  no_scenes_per_act=no_scenes_per_act,
                                                  report_input_lines=True)
-            msg = f"{kk}:Total word count={total_word_count}, unique word count={len(seen_words)}, words missing from word2vec model={len(miss_from_word2vec)}"
+            msg = f"{kk}:Total word count={vsa_tok.total_word_count}, unique word count={len(vsa_tok.seen_words)}, words missing from word2vec model={len(vsa_tok.miss_from_word2vec)}"
             run_log.append(msg)
             print(msg)
             print(miss_from_word2vec)
         except Exception as e:
             print(f"******ERROR: {e}")
 
-        top_chunk = CSPvec.buildchunks(kk, acts, hierarchy_level, role_vec_data)
+        top_chunk = CSPvec.buildchunks(kk, acts,  role_vec_data)
         if not os.path.exists(file_path):  # Make sure the output directory exists.
             os.makedirs(file_path)  # Create output directory if not exists.
         serialise_vec_hierarchy(top_chunk, outfn)
