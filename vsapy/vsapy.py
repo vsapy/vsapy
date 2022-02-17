@@ -234,3 +234,11 @@ def hdist(a, b):
     if a.validate_operand(b):
         a1, b1 = VsaBase.trunc_vecs_to_same_len(a, b)
         return a.hdist(a1, b1)
+
+
+def sum(ndarray, *args, **kwargs):
+    """
+    Maintains vsa_type custom attribute when perfoming numpy.sum()
+    Todo: there is probably a better way than this.
+    """
+    return VsaBase(np.sum(ndarray, *args, **kwargs), vsa_type=ndarray[0].vsa_type)

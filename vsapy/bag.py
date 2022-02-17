@@ -97,7 +97,7 @@ class BagVec(PackedVec):
                 rawvec = veclist  # veclist is a single [a1, a2, a3, ...] numpy column vector
                 return rawvec, vec_cnt,  vsa.normalize(veclist, vec_cnt, )
         elif isinstance(veclist, list):    # i.e. only 1D array
-            if not isinstance(veclist[0], list):
+            if not isinstance(veclist[0], (list, np.ndarray)):
                 assert vec_cnt >= 1, "you must specify parameter 'vec_cnt': number of vectors in this vector."
                 rawvec = veclist  # veclist is a single [a1, a2, a3, ...] python list vector
                 return rawvec, vec_cnt,  vsa.normalize(veclist, vec_cnt, )
@@ -105,7 +105,7 @@ class BagVec(PackedVec):
             raise ValueError(" 'veclist' is not an array type.")
 
         # veclist contains a list of vectors t be added.
-        rawvec = np.sum(veclist, axis=0)
+        rawvec = vsa.sum(veclist, axis=0)
         if vec_cnt >= 1:
             # This enables passing in one or more un-normalized vectors in veclist. If vec_cnt >= 1 we assume that
             # vec_cnt accounts for all un-normalised vectors in the list
@@ -144,11 +144,11 @@ class BareChunk(RawVec):
         self.creation_data_time_stamp = cnk.creation_data_time_stamp
         self.aname = cnk.aname
         self.chunklist = [BareChunk(c) for c in cnk.chunklist] if not cnk.isTerminalNode else []
-
+        self.__terminal_node = cnk.isTerminalNode
 
     @property
     def isTerminalNode(self):
-        return self.chunklist is None
+        return self.__terminal_node
 
     def get_acts(self, name_prefix=''):
         if name_prefix != '':
