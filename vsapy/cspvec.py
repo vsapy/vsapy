@@ -27,7 +27,7 @@ class CSPvec(RawVec):
     trace_thresholds = [0.53]
     # trace_thresholds = [0.8, 0.7, 0.54]
 
-    def __init__(self, name, veclist, level, role_vecs, maxvecs=32, chunks=None, creation_data_time_stamp=None):
+    def __init__(self, name, veclist, role_vecs, chunks=None, creation_data_time_stamp=None):
 
         self.creation_data_time_stamp = role_vecs.creation_data_time_stamp
 
@@ -36,9 +36,18 @@ class CSPvec(RawVec):
 
         self.im_the_requester = False  # Service owning this vector is the requester
         self.aname = name
-        self.level = level
         self.ref_id = -1
         self.start_offset = -1000
+
+        if isinstance(veclist[0], CSPvec):
+            # This means we are building from a list of previously created chunks
+            self.__terminal_node = False
+            self.chunklist = veclist  # the real vectors, for debug and possible use in clean up
+            veclist = [c.myvec for c in veclist]
+        else:
+            self.__terminal_node = True
+            # veclist = veclist
+
         self.chunksize = len(veclist)
         self.veclen = len(veclist[0])
 
@@ -114,57 +123,40 @@ class CSPvec(RawVec):
 
     @property
     def isTerminalNode(self):
-        return self.chunklist is None
+        #return self.chunklist is None
+        return self.__terminal_node
 
     @classmethod
-    def get_refid_from_tvec_perms(cls, invec):
-        for i in range(len(CSPvec.tvec_permutations)):
-            if vsa.randvec(invec, CSPvec.tvec_permutations[i]) > 0.53:
-                break
-        return i
+    def createchunk(cls, name, chunks, rolevecs):
+        return cls(name, chunks, rolevecs, chunks)
 
     @classmethod
-    def createchunkfromvecs(cls, name, veclist, level, rolevecs, maxvecs=32):
-        return cls(name, veclist, level, rolevecs, maxvecs)
-
-    @classmethod
-    def createchunkfromchunks(cls, name, chunks, level, rolevecs, maxvecs=32):
-        veclist = [c.myvec for c in chunks]
-        return cls(name, veclist, level, rolevecs, maxvecs, chunks)
-
-    @classmethod
-    def createchunkfromchunks1(cls, name, chunks, level, role_vecs, maxvecs=32):
+    def createchunk_build_name_from_chunks(cls, name, chunks, role_vecs):
         name = ' '.join([c.aname for c in chunks])
-        veclist = [c.myvec for c in chunks]
-        return cls(name, veclist, level, role_vecs, maxvecs, chunks)
+        return cls(name, chunks, role_vecs, chunks)
 
     @classmethod
-    def buildchunks(cls, name, chunklist, level, role_vecs, split_tail_evenly=True, maxvecs=32, rebuild_names=False):
+    def buildchunks(cls, name, chunklist, role_vecs, split_tail_evenly=True, maxvecs=32, rebuild_names=False):
         """
 
         :param name: Name of this chunk
         :param chunklist: list of individual vectors
-        :param level: hiearchy_level intentional side effect modifies level in outside world
         :param split_tail_evenly: True=tails of list split approx in half, else straglers just moppoed up into one vec
         :return: top level chunk of a heirachy built from the flat list of chunks supplied
         """
 
-        try:
-            if len(chunklist) == 0:
-                chunklist = chunklist
-            if chunklist is None:
-                chunklist = chunklist
-            if isinstance(chunklist[0], CSPvec):
-                if rebuild_names:
-                    create_chunk = cls.createchunkfromchunks1
-                else:
-                    create_chunk = cls.createchunkfromchunks
-            else:
-                create_chunk = cls.createchunkfromvecs
-        except IndexError as e:
-            e = e
+        assert chunklist is not None, "chunklist is not empty"
+        if isinstance(chunklist[0], CSPvec):
+            level = 1
+        else:
+            level = 0
 
-        m = 0
+        if rebuild_names:
+            create_chunk = cls.createchunk_build_name_from_chunks
+        else:
+            create_chunk = cls.createchunk
+
+        # m = 0
         llen = len(chunklist)
         if llen > maxvecs:
             while llen > maxvecs:
@@ -176,8 +168,8 @@ class CSPvec(RawVec):
                     if (llen - m) % maxvecs != 0 and split_tail_evenly and (llen - m < maxvecs * 2):
                         break
                     sub_chunk_list = chunklist[m:m + maxvecs]
-                    chnks.append(create_chunk("{}, L{:02d}, part{:02d}".format(name, level[0], part_id),
-                                              sub_chunk_list, level[0], role_vecs, maxvecs=maxvecs))
+                    chnks.append(create_chunk("{}, L{:02d}, part{:02d}".format(name, level, part_id),
+                                              sub_chunk_list, role_vecs))
                     m += maxvecs
                     part_id += 1
 
@@ -185,22 +177,22 @@ class CSPvec(RawVec):
                     if split_tail_evenly:
                         # we want to split the remainder into two fairly even chunks
                         msplit = int((llen - m) / 2)
-                        chnks.append(create_chunk("{}, L{:02d}, part{:02d}".format(name, level[0], part_id),
-                                                  chunklist[m:m + msplit], level[0], role_vecs, maxvecs=maxvecs))
+                        chnks.append(create_chunk("{}, L{:02d}, part{:02d}".format(name, level, part_id),
+                                                  chunklist[m:m + msplit], role_vecs))
                         m += msplit
                         part_id += 1
-                        chnks.append(create_chunk("{}, L{:02d}, part{:02d}".format(name, level[0], part_id),
-                                                  chunklist[m:llen], level[0], role_vecs, maxvecs=maxvecs))
+                        chnks.append(create_chunk("{}, L{:02d}, part{:02d}".format(name, level, part_id),
+                                                  chunklist[m:llen], role_vecs))
                     else:
                         # grab any left over vecs
-                        chnks.append(create_chunk("{}, L{:02d}, part{:02d}".format(name, level[0], part_id),
-                                                  chunklist[m:llen], level[0], role_vecs, maxvecs=maxvecs))
+                        chnks.append(create_chunk("{}, L{:02d}, part{:02d}".format(name, level, part_id),
+                                                  chunklist[m:llen], role_vecs,))
 
-                level[0] += 1  # sub chunks were built so nexy level is at one level higher than its children
+                level += 1  # sub chunks were built so nexy level is at one level higher than its children
                 if rebuild_names:
-                    create_chunk = cls.createchunkfromchunks1  # after the first pass we are always dealing with chunks
+                    create_chunk = cls.createchunk_build_name_from_chunks  # after the first pass we are always dealing with chunks
                 else:
-                    create_chunk = cls.createchunkfromchunks  # after the first pass we are always dealing with chunks
+                    create_chunk = cls.createchunk  # after the first pass we are always dealing with chunks
 
                 if len(chnks) <= maxvecs:
                     chunklist = chnks
@@ -209,7 +201,7 @@ class CSPvec(RawVec):
                     llen = len(chnks)
                     chunklist = chnks[:]
 
-        dbcnks = create_chunk(name, chunklist, level[0], role_vecs, maxvecs=maxvecs)
+        dbcnks = create_chunk(name, chunklist, role_vecs)
         return dbcnks
 
     @staticmethod
@@ -225,7 +217,7 @@ class CSPvec(RawVec):
         return invec1
 
 
-    def as_seq(self, seq_posn, im_the_requester=False, target_chan=1, position_request= None):
+    def as_seq(self, im_the_requester=False):
 
         self.im_the_requester = im_the_requester
 
@@ -241,10 +233,11 @@ class CSPvec(RawVec):
             np.roll(self.roles.role_vec_count, vec_count),
         ]
 
-        seq_vec = BagVec(sub_vecs, vec_count)
+        bagvec = BagVec(sub_vecs, vec_count)
+        seq_vec = VsaBase(bagvec.myvec, vsa_type=bagvec.myvec.vsa_type)
         start_vec = np.roll(vsa.bind(self.roles.permVecs[0], seq_vec), -1)
 
-        log.infow(f"{self.chunk_id:04d}: START_VEC: NoSubVecs({vec_count}) vec_len={len(start_vec)} | {self.aname}")
+        log.info(f"{self.chunk_id:04d}: START_VEC: NoSubVecs({vec_count}) vec_len={len(start_vec)} | {self.aname}")
 
         # ChunkService.get_meta_data_debug(start_vec, seq_posn)  # For DEBUG
         return start_vec
@@ -264,16 +257,16 @@ class CSPvec(RawVec):
             # return match, next_vec, posn
 
     def get_current_permutation(self, invec):
-        if self.roles.tvec_permutations:
-            return self.get_refid_from_tvec_perms(invec)
+        if self.check_for_start_tag_vec(invec):
+            return -1
         pindex = 0
         pvec = self.roles.role_tvec_tag.copy()
         for p in self.roles.permVecs:
             pvec = np.roll(vsa.bind(pvec, np.roll(p, pindex)), -1)
-            hd = vsa.randvec(pvec, invec)
+            hd = vsa.hsim(pvec, invec)
             if hd >= CSPvec.trace_threshold:
-                # We know if we are better than threshold that we have the best match on role_posnfinder
-                # because only one pvec.role_posnfinder combo will ever be a match
+                # We know if we are better than threshold that we have the best match on role_posn finder
+                # because only one pvec.role_posn finder combo will ever be a match
                 break
             pindex -= 1
         if abs(pindex) >= len(self.roles.permVecs):
@@ -290,7 +283,7 @@ class CSPvec(RawVec):
         reverse_vec = np.roll(vsa.bind(np.roll(self.roles.permVecs[pindex], -1 - pindex), invec), 1)
         if debug_prev_vec is not None:
             rhd = vsa.hsim(debug_prev_vec, reverse_vec)
-        return reverse_vec, pindex
+        return reverse_vec, pindex - 1
 
     def forward_unbind(self, invec):
         try:
@@ -363,9 +356,11 @@ class CSPvec(RawVec):
         nextvec = np.roll(vsa.bind(pvec, self.commandvec), -1)
         return nextvec
 
-    def check_for_stopvec(self, invec, myvec):
-        return self.check_for_activation(invec, myvec, CSPvec.trace_thresholds[0])  # CS_Fixup01
+    def check_for_stopvec(self, invec):
+        return vsa.hsim(self.stopvec, invec) > CSPvec.trace_thresholds[0]
 
+    def check_for_start_tag_vec(self, invec):
+        return vsa.hsim(self.roles.role_tvec_tag, invec) > CSPvec.trace_thresholds[0]
 
     def flattenchunkheirachy(self, allchunks, skip_worker_chunks=False):
         if self.isTerminalNode:
