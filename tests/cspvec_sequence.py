@@ -26,12 +26,8 @@ def search_chunks(top_chunk, target_vec):
 
     return best_match, max_sim
 
-data_files = {
-    "role_vecs": "role_vectors.bin",
-}
-
 if __name__ in "__main__":
-    role_vecs = create_role_data(data_files, vec_len=10000, rand_seed=123)
+    role_vecs = create_role_data(vec_len=10000, rand_seed=123)
     vsa_tok = VsaTokenizer(role_vecs, True,
                            allow_skip_words=False, skip_words={},
                            skip_word_criterion=lambda w: False)  # In this case, the lambda is just disabling skip_words
