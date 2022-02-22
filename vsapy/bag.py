@@ -77,6 +77,14 @@ class PackedVec(object):
 
 class BagVec(PackedVec):
     def __init__(self, veclist, vec_cnt=-1):
+        """
+
+        :param veclist: list of vectors to be majority-summed.
+        :param vec_cnt: If the vector is already summed the number of vectors in the sum. This allows a mix of
+                        normalised and un-normalised vectors to be passed in veclist. For example,
+                        veclist = [[2,1,3,5,0], [1,0,1,1,0,1]] then vec_cnt might = 7
+                        because 1st vec could be an un-normallised sum of 6 vecs and the second vec is normalised.
+        """
         rawvec, vec_cnt, norm_vec = BagVec.bundle(veclist, vec_cnt)
         super(BagVec, self).__init__(norm_vec)
         self.vec_cnt = vec_cnt
