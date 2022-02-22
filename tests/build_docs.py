@@ -4,11 +4,12 @@ macbeth. The idea is to demo the recursive chunking.
 
 The 'runlist' list (see below) details where to find each document source and what parser to use to convert the words to vectors.
 
-Each parser processes words into vector, and the proceeds to perform heirarchical bundling of the word vecs into
+Each parser processes words into vector, and the proceeds to perform hierarchical bundling of the word vecs into
      word_vecs->sentence_vecs->scene_vecs->act_vecs->whole_document_vec
          see CSPvec.buildchunks()
 
 """
+
 import random
 import sys
 import xmltodict as xml
@@ -255,7 +256,7 @@ class VsaTokenizer(object):
     def createWordVector_GB(self, word):
         v = self.symbol_dict[word[0]]
         for a in word[1:]:
-            v = xorBind(v, symbol_dict[a])
+            v = xorBind(v, self.symbol_dict[a])
         return v
 
     def get_word2Vec(self, w):
@@ -296,7 +297,7 @@ class VsaTokenizer(object):
 
         return v
 
-    def get_or_skip_word_vector(self, w):
+    def get_vector_or_skip_the_word(self, w):
         '''
         Returns BSC vector representation of the word or None if failed to build a vector
         (e.g word is in skip list or word contains all non-printing chars.
@@ -336,7 +337,7 @@ class VsaTokenizer(object):
                 w = w.replace("'d", "ed")
                 if w is None: continue
 
-                vec = self.get_or_skip_word_vector(w)
+                vec = self.get_vector_or_skip_the_word(w)
                 if vec is not None:
                     self.total_word_count += 1
                     wordvecs.append(CSPvec(w, [vec], self.role_vecs))
@@ -772,32 +773,6 @@ if __name__ == '__main__':
     word_format += '_SHAPED' if CSPvec.use_shaping else '_NoShape'
 
     model = None
-
-    symbols = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.;:,_'!?-[]&*()>"
-    symbol_dict = createSymbolVectors(symbols, 10000)
-    num_dict = create_base_vecs("0", "9", 10000, True)
-
-
-    skip_words = {}
-    # skip_words = {'a', 'it', 'is', 'the'}
-    # skip_words_file = 'skip_Words' + word_format + '.bin'
-    # skip_words = deserialise_object(skip_words_file, {})
-
-    skip_words['a'] = PackedVec(symbol_dict['a'])
-    skip_words['A'] = PackedVec(symbol_dict['A'])
-    skip_words['I'] = PackedVec(symbol_dict['I'])
-    skip_words['O'] = PackedVec(symbol_dict['O'])
-    # # skip_words['to'] = createWordVector('to')
-    # skip_words['of'] = createWordVector('of')
-    # skip_words['the'] = createWordVector('of')
-
-    miss_from_word2vec = {}
-    total_word_count = 0
-    seen_words = {}
-    # seen_words_file = 'seen_words' + word_format + '.bin'
-    # seen_words = deserialise_object(seen_words_file, {})
-
-
     if False and use_word2vec:  # Word2vec is not implemented in this demo
         w2vload_startTime = timeit.default_timer()
         model = Word2Vec.load('old_new_english.model').wv
@@ -817,13 +792,21 @@ if __name__ == '__main__':
 
 
     # my_r2b = Real2Binary(300, 10000, seed=951753)
-    data_files = {
-        "role_vecs": "role_vectors.bin",
-    }
-    role_vec_data = create_role_data(data_files, vec_len=10000, rand_seed=123)
+    role_vec_data = create_role_data(data_files=None, vec_len=10000, rand_seed=123)
+
+    skip_words = {}
+    skip_words['a'] = PackedVec(role_vec_data.symbol_dict['a'])
+    skip_words['A'] = PackedVec(role_vec_data.symbol_dict['A'])
+    skip_words['I'] = PackedVec(role_vec_data.symbol_dict['I'])
+    skip_words['O'] = PackedVec(role_vec_data.symbol_dict['O'])
+
     vsa_tok = VsaTokenizer(role_vec_data, usechunksforWords,
                            allow_skip_words=allow_word_skip, skip_words=skip_words,
                            skip_word_criterion=lambda w: False)  # In this case, the lambda is just disabling skip_words
+
+    # skip_words['to'] = vsa_tok.createWordVector('to').packed
+    # skip_words['of'] = vsa_tok.createWordVector('of').packed
+    # skip_words['the'] = vsa_tok.createWordVector('the').packed
 
     docs = []
     run_log = []
@@ -831,7 +814,7 @@ if __name__ == '__main__':
         startTime = timeit.default_timer()
         try:
             vsa_tok.total_word_count = 0
-            miss_from_word2vec.clear()
+            vsa_tok.miss_from_word2vec.clear()
             vsa_tok.linecheck.clear()
             acts, scenes, linecheck = parse_func(infn, vsa_tok,
                                                  no_acts=no_acts,
@@ -840,7 +823,7 @@ if __name__ == '__main__':
             msg = f"{kk}:Total word count={vsa_tok.total_word_count}, unique word count={len(vsa_tok.seen_words)}, words missing from word2vec model={len(vsa_tok.miss_from_word2vec)}"
             run_log.append(msg)
             print(msg)
-            print(miss_from_word2vec)
+            print(vsa_tok.miss_from_word2vec)
         except Exception as e:
             print(f"******ERROR: {e}")
 
