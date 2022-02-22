@@ -20,18 +20,11 @@ def load_vsa_document_set(usechunksforWords,
 
     file_path = './data/output_vec_files'
 
-    # runlist = [('macbeth', f'{file_path}/macbeth_nltk_{word_format}.bin', 'Macbeth', 'OE_tk_mbeth',
-    #             'Macbeth: Old English. Natural Language Tool Kit.'),
-    #            ('ntlk_shakespear', f'{file_path}/hamlet_nltk_{word_format}.bin', 'Hamlet', 'OE_tk_ham',
-    #             'Hamlet: Old English. Natural Language Tool Kit.'),
-    #            ('hamlet_orig', f'{file_path}/hamlet_stanzas_{word_format}.bin', 'Hamlet', 'OE_og_ham',
-    #             'Hamlet: Old English. Original Source.'),
-    #            ('nofear_old', f'{file_path}/hamlet_old_{word_format}.bin', 'Hamlet', 'OE_nf_ham',
-    #             'Hamlet: Old English. NoFear Translation Source.'),
-    #            ('nofear_new', f'{file_path}/hamlet_new_{word_format}.bin', 'Hamlet', 'NE_nf_ham',
-    #             'Hamlet: New English. NoFear Translation Source.')]
-
-    runlist = [('hamlet_orig', f'{file_path}/hamlet_stanzas_{word_format}.bin', 'Hamlet', 'OE_og_ham',
+    runlist = [('macbeth', f'{file_path}/macbeth_nltk_{word_format}.bin', 'Macbeth', 'OE_tk_mbeth',
+                'Macbeth: Old English. Natural Language Tool Kit.'),
+               ('ntlk_shakespear', f'{file_path}/hamlet_nltk_{word_format}.bin', 'Hamlet', 'OE_tk_ham',
+                'Hamlet: Old English. Natural Language Tool Kit.'),
+               ('hamlet_orig', f'{file_path}/hamlet_stanzas_{word_format}.bin', 'Hamlet', 'OE_og_ham',
                 'Hamlet: Old English. Original Source.'),
                ('nofear_old', f'{file_path}/hamlet_old_{word_format}.bin', 'Hamlet', 'OE_nf_ham',
                 'Hamlet: Old English. NoFear Translation Source.'),

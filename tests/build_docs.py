@@ -1,5 +1,5 @@
 """
-This demo build various versions of shakespeare plays, namly multiple versions fo hamlet and also an old-english
+This demo build various versions of shakespeare plays, namely multiple versions fo hamlet and also an old-english
 macbeth. The idea is to demo the recursive chunking.
 
 The 'runlist' list (see below) details where to find each document source and what parser to use to convert the words to vectors.
@@ -22,7 +22,18 @@ sys.path.append('/home/chris/Documents/Graham-GenSim')
 
 import nltk.data
 from nltk.corpus import stopwords
-stopWords = set(stopwords.words('english'))
+try:
+    stopWords = set(stopwords.words('english'))
+except LookupError as e:
+    nltk.download('stopwords')
+    stopWords = set(stopwords.words('english'))
+
+from nltk.corpus import shakespeare
+try:
+    shakespear_ids = shakespeare.fileids()
+except LookupError as e:
+    nltk.download('shakespeare')
+
 
 from collections import defaultdict
 import json
@@ -389,7 +400,12 @@ def buildactdicts(filename):
     actname = ""
     scenename = ""
     fullactorscombined = defaultdict(lambda: ([], []))
-    tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+    tokenizer = None
+    try:
+        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+    except LookupError as e:
+        nltk.download('punkt')
+        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 
     for index, row in df.iterrows():
         #print(f"index {index}, row {row} ")
@@ -586,7 +602,16 @@ def buildacts_from_nltk_xml(fname, vsa_tok, no_acts=10000, no_scenes_per_act=100
         print("\n\n", act_name)
         if 1:
             scenes = []
-            for s in a['SCENE']:
+            if isinstance(a['SCENE'], list):
+                scene = a['SCENE']
+            else:
+                # This is a fixup for bug in coding of shakespear corpus when there is only one scene in an act.
+                scene = [xml.OrderedDict({k:v for k,v in a['SCENE'].items()})]
+
+            for s in scene:
+                # if not isinstance(a['SCENE'], list):
+                #     # This is a fixup for bug in coding of shakespear corpus when there is only one scene in an act.
+                #     s = xml.OrderedDict({k: v for k, v in a['SCENE'].items()})
                 scene_name = s['TITLE']
                 # this_scene = get_scene_number(scene_name)
                 scene_name = scene_name.replace("\n", "").strip()
@@ -784,18 +809,9 @@ if __name__ == '__main__':
 
     actdict_old, actdict_new = buildactdicts('data/source_files/Hamlet_CSV01_UTF16_@Sep.txt')  # Preprocess NOFEAR shakespear versions
     file_path = './data/output_vec_files'
-    # -----------------------------------------------------------------------------------------------
-    # I have disabled the nltk versions untill I write up how to install nltk and its components.
-    #
-    runlist = [('macbeth', '/home/chris/nltk_data/corpora/shakespeare/macbeth.xml', f'{file_path}/macbeth_nltk_{word_format}.bin', buildacts_from_nltk_xml),
-               ('ntlk_shakespear', '/home/chris/nltk_data/corpora/shakespeare/hamlet.xml', f'{file_path}/hamlet_nltk_{word_format}.bin', buildacts_from_nltk_xml),
+    runlist = [('macbeth', nltk.corpus.shakespeare.abspath('dream.xml'), f'{file_path}/macbeth_nltk_{word_format}.bin', buildacts_from_nltk_xml),
+               ('ntlk_shakespeare', nltk.corpus.shakespeare.abspath('hamlet.xml'), f'{file_path}/hamlet_nltk_{word_format}.bin', buildacts_from_nltk_xml),
                ('hamlet_orig', 'data/source_files/hamlet_stanzas.json', f'{file_path}/hamlet_stanzas_{word_format}.bin', buildacts_from_json),
-               ('nofear_old', actdict_old, f'{file_path}/hamlet_old_{word_format}.bin', buildacts_from_csv),
-               ('nofear_new', actdict_new, f'{file_path}/hamlet_new_{word_format}.bin', buildacts_from_csv)]
-    #
-    # I have removed the nltk versions from runlist until I write up how to install nltk and its components.
-    # -----------------------------------------------------------------------------------------------
-    runlist = [('hamlet_orig', 'data/source_files/hamlet_stanzas.json', f'{file_path}/hamlet_stanzas_{word_format}.bin', buildacts_from_json),
                ('nofear_old', actdict_old, f'{file_path}/hamlet_old_{word_format}.bin', buildacts_from_csv),
                ('nofear_new', actdict_new, f'{file_path}/hamlet_new_{word_format}.bin', buildacts_from_csv)]
 
