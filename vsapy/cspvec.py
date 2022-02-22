@@ -1,12 +1,4 @@
-import threading
-import datetime
-from enum import IntEnum
-import numpy as np
-import vsapy as vsa
-from .vsatype import VsaBase, VsaType
-from vsapy.bag import *
 from vsapy.role_vectors import *
-from vsapy.helpers import deserialise_object
 
 from vsapy.logger_utils import *
 log = setuplogs(level='INFO')
@@ -31,14 +23,7 @@ class CSPvec(RawVec):
 
         self.creation_data_time_stamp = role_vecs.creation_data_time_stamp
 
-        # if "NOT SET" in CSPvec.id_stamp:  # This means class vars have never been initialised
-        #     CSPvec.id_stamp = self.creation_data_time_stamp
-
-        self.im_the_requester = False  # Service owning this vector is the requester
         self.aname = name
-        self.ref_id = -1
-        self.start_offset = -1000
-
         if isinstance(veclist[0], CSPvec):
             # This means we are building from a list of previously created chunks
             self.__terminal_node = False
@@ -67,6 +52,7 @@ class CSPvec(RawVec):
         # The spinoff benefit is that we get better matches because vector lists ending in the same
         # vector will not differ by the stop vector.
         self.stopvec = vsa.bind(self.roles.stopvec, np.roll(veclist[-1], 1))
+
         if self.isTerminalNode:
             # we are creating a basic compound vector these do not need a stop vector, however if the number of vectors
             # to be added is even we add one enyway to make the majority vote work niceley
@@ -77,26 +63,23 @@ class CSPvec(RawVec):
         else:
             veclist.append(self.stopvec)
 
-
         rawvec, vec_cnt, norm_vec  = self.addvecs(veclist)
         super(CSPvec, self).__init__(rawvec, vec_cnt)
 
         if self.isTerminalNode:
-            # If we are a terminal node we will never look for our own stop_vec, however we do want to detect the
-            # parent vectors stop_vec.  We therefore recalc the stop_vec to match with any parent vectors
-            # stop_vec should 'this' vec be last in the list.
+            # If we are a terminal node we will never look for our own stop_vec. However, we do want to detect the
+            # parent vector's stop_vec.  We therefore pre-set the stop_vec to match with self.myvec because, if this
+            # vec is in the last position of a higher-level list, self.myvec will be used to build the parent's stopvec.
             self.stopvec = vsa.bind(self.roles.stopvec, np.roll(self.myvec, 1))
     
-
     def addvecs(self, veclist):
         """
-        Adding like this, p0 * a + (p0 * p1 ** b) + (p0 * p1 * p2 * c) +
+        Adding like this, p0 * a^1 + (p0 * p1 * b^2) + (p0 * p1 * p2 * c^3) + ... Where '^' means cyclic-shift
         Using this method we gain benefit because we will get better similarity matchups
         since sequence is controlled by a fixed set of random vectors
-        sumvec = self.prep_payload(veclist[0], 1, mypayload)
 
         :param veclist:
-        :return:
+        :return: Un-normalised_vec, sub-vec_cnt, normalised-vec
         """
 
         if len(veclist) == 1:
@@ -123,7 +106,6 @@ class CSPvec(RawVec):
 
     @property
     def isTerminalNode(self):
-        #return self.chunklist is None
         return self.__terminal_node
 
     @classmethod
@@ -177,23 +159,18 @@ class CSPvec(RawVec):
                     if split_tail_evenly:
                         # we want to split the remainder into two fairly even chunks
                         msplit = int((llen - m) / 2)
-                        chnks.append(create_chunk("{}, L{:02d}, part{:02d}".format(name, level, part_id),
+                        chnks.append(create_chunk(f"{name}, L{level:02d}, part{part_id:02d}",
                                                   chunklist[m:m + msplit], role_vecs))
                         m += msplit
                         part_id += 1
-                        chnks.append(create_chunk("{}, L{:02d}, part{:02d}".format(name, level, part_id),
+                        chnks.append(create_chunk(f"{name}, L{level:02d}, part{part_id:02d}",
                                                   chunklist[m:llen], role_vecs))
                     else:
                         # grab any left over vecs
-                        chnks.append(create_chunk("{}, L{:02d}, part{:02d}".format(name, level, part_id),
+                        chnks.append(create_chunk(f"{name}, L{level:02d}, part{part_id:02d}",
                                                   chunklist[m:llen], role_vecs,))
 
-                level += 1  # sub chunks were built so nexy level is at one level higher than its children
-                if rebuild_names:
-                    create_chunk = cls.createchunk_build_name_from_chunks  # after the first pass we are always dealing with chunks
-                else:
-                    create_chunk = cls.createchunk  # after the first pass we are always dealing with chunks
-
+                level += 1  # sub chunks were built so next level is at one level higher than its children
                 if len(chnks) <= maxvecs:
                     chunklist = chnks
                     break
@@ -204,24 +181,21 @@ class CSPvec(RawVec):
         dbcnks = create_chunk(name, chunklist, role_vecs)
         return dbcnks
 
-    @staticmethod
-    def unbind_one_step(invec, pindex):
-        return np.roll(vsa.bind(np.roll(CSPvec.permVecs[pindex], -1 * pindex), invec), -1)
+    def unbind_one_step(self, invec, pindex):
+        return np.roll(vsa.bind(np.roll(self.roles.permVecs[pindex], -1 * pindex), invec), -1)
 
-    @staticmethod
-    def recover_stop_vec_from_vec_count(invec, vec_count):
+    def recover_stop_vec_from_vec_count(self, invec, vec_count):
         invec1 = invec[:]
         for pindex in range(vec_count):
-            invec1 = CSPvec.unbind_one_step(invec1, pindex)
+            invec1 = self.unbind_one_step(invec1, pindex)
 
         return invec1
-
 
     def as_seq(self, im_the_requester=False):
 
         self.im_the_requester = im_the_requester
 
-        # We write the total number of sub-vectors into the vector, if the number of sub-vecs in self.myvec_raw
+        # We write the total number of sub-vectors into the vector, if the number of sub-vecs in self.vec_cnt
         # is even, then the total number of vecs will be extended by 1 during normalisation.
         vec_count = self.vec_cnt + 2
         if vec_count % 2 == 0:
@@ -229,8 +203,8 @@ class CSPvec(RawVec):
 
         sub_vecs = [
             self.rawvec,
-            self.roles.tvec_tag,
-            np.roll(self.roles.vec_count, vec_count),
+            self.roles.tvec_tag,  # metadata, identifies the start of a sequence vector
+            np.roll(self.roles.vec_count, vec_count),  # metadata, number of sub-vecs inn this vec including metadata
         ]
 
         bagvec = BagVec(sub_vecs, vec_count)
@@ -239,7 +213,6 @@ class CSPvec(RawVec):
 
         log.info(f"{self.chunk_id:04d}: START_VEC: NoSubVecs({vec_count}) vec_len={len(start_vec)} | {self.aname}")
 
-        # ChunkService.get_meta_data_debug(start_vec, seq_posn)  # For DEBUG
         return start_vec
 
     def check_for_activation(self, invec, myvec, required_threshhold):
@@ -253,8 +226,6 @@ class CSPvec(RawVec):
             return match, invec, -1, invec
         else:
             return self.new_get_next_vector(invec, match)
-            # next_vec, posn = self.new_get_next_vector(invec, match)
-            # return match, next_vec, posn
 
     def get_current_permutation(self, invec):
         if self.check_for_start_tag_vec(invec):
@@ -271,11 +242,7 @@ class CSPvec(RawVec):
             pindex -= 1
         if abs(pindex) >= len(self.roles.permVecs):
             log.error("ERROR: {} Could not find 'T' vector in input vector".format(self.aname))
-        # try:
-        #     assert abs(pindex) < len(NewChunkPvecs.permVecs), \
-        #         "ERROR: {} Could not find 'T' vector in input vector".format(self.aname)
-        # except:
-        #     pindex = pindex
+
         return abs(pindex)
 
     def reverse_unbind(self, invec, debug_prev_vec=None):
@@ -322,9 +289,6 @@ class CSPvec(RawVec):
             # and should be discounted as a valid match when check_for_activation() returns
             return 0, invec, -1, invec
 
-        # Test reverse_bind
-        # reverse_vec, _ = self.reverse_unbind(nextvec, invec)
-
         try:
             # pvec = np.roll(NewChunkPvecs.permVecs[0 - ppindex], ppindex)
             nextvec2, _ = self.forward_unbind(nextvec)
@@ -333,11 +297,6 @@ class CSPvec(RawVec):
             # We return 0 instead of hd_match to indicate that the match was unrelaible
             # and should be discounted as a valid match when check_for_activation() returns
             return 0, invec, -1, invec
-
-        # nextvec2 = np.roll(vsa.bind(pvec, invec), -1)
-
-        # except IndexError:
-        #    pindex=pindex
 
         return hd_match, nextvec, -1 - pindex, nextvec2
 
