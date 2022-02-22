@@ -1,0 +1,28 @@
+{"service":{
+    "service_name":"tfl camera 08858",
+    "service_outputs":[
+                {"output_name":"traffic_camera_image",
+                "output_data_type":"char64jpg",
+                "output_related_concepts":[
+                    {"concept_name":"road"}
+                ],
+                "output_related_instances":[
+                    {"instance_name":"Oxford Street",
+                    "instance_concepts":["road","location"],
+                    "road_name":"Oxford Street",
+                    "location_longitude":-0.1467503,
+                    "location_latitude":51.5149566 
+                    },
+                    {"instance_name":"Orchard Street",
+                    "instance_concepts":["road","location"],
+                    "road_name":"Orchard Street",
+                    "location_longitude":-0.1563065,
+                    "location_latitude":51.5146529  
+                    }
+                ]}
+            ],
+
+    "service_average_response_time_ms":1000
+}
+
+}

@@ -1,0 +1,25 @@
+{"service":{
+    "service_name":"object_detector_1",
+    "service_inputs":[{"input_name":"image",
+                "input_data_type":"char64jpg",
+                "input_related_concepts":[
+                    {"concept_name":"location"}
+                ],
+                "required":true}
+            ],
+    "service_outputs":[ 
+                {"output_name":"object_list",
+                "output_data_type":"list_string",
+                "output_related_concepts":[
+                    {"concept_name":"car"},
+                    {"concept_name":"person"},
+                    {"concept_name":"bus"},
+                    {"concept_name":"traffic light"}
+                    ]
+                }
+            ],
+
+    "service_average_response_time_ms":5000
+}
+
+}

@@ -1,0 +1,28 @@
+{"service":{
+    "service_name":"tfl camera 02151",
+    "service_outputs":[
+                {"output_name":"traffic_camera_image",
+                "output_data_type":"char64jpg",
+                "output_related_concepts":[
+                    {"concept_name":"road"}
+                ],
+                "output_related_instances":[
+                    {"instance_name":"Tennyson Road",
+                    "instance_concepts":["road","location"],
+                    "road_name":"Tennyson Road",
+                    "location_longitude":0.0064386,
+                    "location_latitude":51.541137  
+                    },
+                    {"instance_name":"Romford Road",
+                    "instance_concepts":["road","location"],
+                    "road_name":"Romford Road",
+                    "location_longitude":0.0529565,
+                    "location_latitude":51.5525474  
+                    }
+                ]}
+            ],
+
+    "service_average_response_time_ms":1000
+}
+
+}

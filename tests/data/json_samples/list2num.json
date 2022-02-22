@@ -1,0 +1,16 @@
+{"service":{
+    "service_name":"list2num",
+    "service_uri":"localhost:5901",
+    "service_inputs":[{"input_name":"list",
+                "input_data_type":"list_string",
+                "required":true}
+            ],
+    "service_outputs":[ 
+                {"output_name":"item count",
+                "output_data_type":"int"}
+                ],
+
+    "service_average_response_time_ms":5000
+    }
+
+}

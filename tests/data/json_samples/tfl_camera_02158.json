@@ -1,0 +1,28 @@
+{"service":{
+    "service_name":"tfl camera 02158",
+    "service_outputs":[
+                {"output_name":"traffic_camera_image",
+                "output_data_type":"char64jpg",
+                "output_related_concepts":[
+                    {"concept_name":"road"}
+                ],
+                "output_related_instances":[
+                    {"instance_name":"Carlton Road",
+                    "instance_concepts":["road","location"],
+                    "road_name":"Carlton Road",
+                    "location_longitude":0.04485,
+                    "location_latitude":51.5497  
+                    },
+                    {"instance_name":"Romford Road",
+                    "instance_concepts":["road","location"],
+                    "road_name":"Romford Road",
+                    "location_longitude":0.0529565,
+                    "location_latitude":51.5525474  
+                    }
+                ]}
+            ],
+
+    "service_average_response_time_ms":1000
+}
+
+}
