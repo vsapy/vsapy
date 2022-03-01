@@ -64,7 +64,10 @@ class PackedVec(object):
 
     @property
     def myvec(self):
-        return VsaBase(np.unpackbits(self.__myvec), self.vsa_type)
+        if self.vsa_type == VsaType.Laiho:
+            return VsaBase(np.unpackbits(self.__myvec), self.vsa_type, bits_per_slot=self.bits_per_slot)
+        else:
+            return VsaBase(np.unpackbits(self.__myvec), self.vsa_type)
 
     @myvec.setter
     def myvec(self, v):
@@ -113,7 +116,7 @@ class BagVec(PackedVec):
             raise ValueError(" 'veclist' is not an array type.")
 
         # veclist contains a list of vectors t be added.
-        rawvec = vsa.sum(veclist, axis=0)
+        rawvec = veclist[0].sum(veclist, axis=0)
         if vec_cnt >= 1:
             # This enables passing in one or more un-normalized vectors in veclist. If vec_cnt >= 1 we assume that
             # vec_cnt accounts for all un-normalised vectors in the list

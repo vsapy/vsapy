@@ -8,6 +8,7 @@ class VsaType(IntEnum):
     Tern = 2  # i.i.d Ternary spatter code (+1, -1)
     TernZero = 3  # Ternary spatter code but allows don't care (+1, 0, -1) where 0 means tie occured in bundling
     HRR = 4  # Holographic Reduced Representation
+    Laiho = 5
 
 
 class VsaBase(np.ndarray):
@@ -16,7 +17,7 @@ class VsaBase(np.ndarray):
     class NoAccess(Exception): pass
     class Unknown(Exception): pass
 
-    def __new__(cls, input_array, vsa_type, dtype=None):
+    def __new__(cls, input_array, vsa_type, dtype=None, bits_per_slot=None):
         """
         Create instance of appropriate VsaBase subclass using vsa_type.
         :param input_array:
@@ -29,6 +30,11 @@ class VsaBase(np.ndarray):
             obj = np.asarray(input_array).view(subclass)
             # add the new attribute to the created instance
             obj.vsa_type = vsa_type
+            if vsa_type == VsaType.Laiho:
+                assert bits_per_slot is not None, "you must supply value for bits_per_slot"
+                obj.slots = input_array.shape[-1]
+                obj.bits_per_slot = bits_per_slot
+
             # Finally, we must return the newly created object, cast to the required numpy dtype:
             if dtype:
                 return obj.astype(dtype)
@@ -43,6 +49,9 @@ class VsaBase(np.ndarray):
         # see InfoArray.__array_finalize__ for comments
         if obj is None: return
         self.vsa_type = getattr(obj, 'vsa_type', None)
+        # if self.vsa_type == VsaType.Laiho:
+        self.slots = getattr(obj, 'slots', None)
+        self.bits_per_slot = getattr(obj, 'bits_per_slot', None)
 
     def __reduce__(self):
         # Get the parent's __reduce__ tuple
@@ -118,8 +127,16 @@ class VsaBase(np.ndarray):
         else:
             return a, b[:len(a)]
 
+    @property
+    def unpack(self):
+        return np.unpackbits(self)
+
+    @property
+    def pack(self):
+        return VsaBase(np.packbits(self), self.vsa_type)
+
     @classmethod
-    def randvec(cls, dims, word_size=8, vsa_type=VsaType.BSC):
+    def randvec(cls, dims, word_size=8, vsa_type=VsaType.BSC, bits_per_slot=None):
         """
         :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.
         :param word_size: numpy's word size parameter, e.g. for BSCs wordsize=8 becomes 'uint8'.
@@ -202,3 +219,11 @@ class VsaBase(np.ndarray):
         :return: cosine similarity between a and b. 1.0=exact match.
         """
         return 1.0 - cls.cosine(a, b)
+
+    @classmethod
+    def sum(cls, ndarray, *args, **kwargs):
+        """
+        Maintains vsa_type custom attribute when perfoming numpy.sum()
+        Todo: there is probably a better way than this.
+        """
+        return VsaBase(np.sum(ndarray, *args, **kwargs), vsa_type=ndarray[0].vsa_type)

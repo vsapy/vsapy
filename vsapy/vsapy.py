@@ -138,7 +138,7 @@ def to_vsa_type(sv, vsa_type):
     raise ValueError
 
 
-def randvec(dims, word_size=8, vsa_type=VsaType.BSC):
+def randvec(dims, word_size=8, vsa_type=VsaType.BSC, bits_per_vec=None):
     """
     :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.
     :param word_size: numpy's word size parameter, e.g. for BSCs wordsize=8 becomes 'uint8'.
@@ -147,7 +147,7 @@ def randvec(dims, word_size=8, vsa_type=VsaType.BSC):
     """
     subclass = VsaBase.get_subclass(vsa_type)
     if subclass:
-        return subclass.randvec(dims, word_size, vsa_type)
+        return subclass.randvec(dims, word_size, vsa_type, bits_per_vec)
     else:
         raise ValueError
 
@@ -236,9 +236,11 @@ def hdist(a, b):
         return a.hdist(a1, b1)
 
 
-def sum(ndarray, *args, **kwargs):
-    """
-    Maintains vsa_type custom attribute when perfoming numpy.sum()
-    Todo: there is probably a better way than this.
-    """
-    return VsaBase(np.sum(ndarray, *args, **kwargs), vsa_type=ndarray[0].vsa_type)
+# def sum(ndarray, *args, **kwargs):
+#     """
+#     Maintains vsa_type custom attribute when perfoming numpy.sum()
+#     Todo: there is probably a better way than this.
+#     """
+#     if len(ndarray.shape()) == 1: # If there is only one vector in the list.
+#         return ndarray
+#     return ndarray[0].sum(ndarray, *args, **kwargs)

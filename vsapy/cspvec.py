@@ -72,6 +72,7 @@ class CSPvec(RawVec):
             # vec is in the last position of a higher-level list, self.myvec will be used to build the parent's stopvec.
             self.stopvec = vsa.bind(self.roles.stopvec, np.roll(self.myvec, 1))
     
+
     def addvecs(self, veclist):
         """
         Adding like this, p0 * a^1 + (p0 * p1 * b^2) + (p0 * p1 * p2 * c^3) + ... Where '^' means cyclic-shift
@@ -88,21 +89,24 @@ class CSPvec(RawVec):
         try:
             pindex = 0
             piv = self.permVecs[0]
-            sumvec = vsa.bind(piv, np.roll(veclist[0], pindex + 1))
+            #sumvec = vsa.bind(piv, np.roll(veclist[0], pindex + 1))
+            role_filler_list = [vsa.bind(piv, np.roll(veclist[0], pindex + 1))]
             cnt = 1
             for y in veclist[1:]:
                 cnt += 1
                 pindex += 1
                 piv = vsa.bind(piv, self.permVecs[pindex])
                 v = vsa.bind(piv, np.roll(y, pindex + 1))
-                sumvec = sumvec + v
+                role_filler_list.append(v)
+                #sumvec = sumvec + v
 
+            sumvec = RawVec(role_filler_list)
         except IndexError as e:
             pindex = pindex  # For Debug
             raise IndexError(e)
 
-        nv = vsa.normalize(sumvec, cnt)
-        return sumvec, cnt, nv
+        #nv = vsa.normalize(sumvec, cnt)
+        return sumvec.rawvec, sumvec.vec_cnt, sumvec.myvec
 
     @property
     def isTerminalNode(self):
