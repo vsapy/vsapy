@@ -65,13 +65,17 @@ class PackedVec(object):
     @property
     def myvec(self):
         if self.vsa_type == VsaType.Laiho:
-            return VsaBase(np.unpackbits(self.__myvec), self.vsa_type, bits_per_slot=self.bits_per_slot)
+            #return VsaBase(np.unpackbits(self.__myvec), self.vsa_type, bits_per_slot=self.bits_per_slot)
+            return self.__myvec
         else:
             return VsaBase(np.unpackbits(self.__myvec), self.vsa_type)
 
     @myvec.setter
     def myvec(self, v):
-        self.__myvec = np.packbits(v)
+        if v.vsa_type == VsaType.Laiho:
+            self.__myvec = v
+        else:
+            self.__myvec = np.packbits(v)
 
     @property
     def packed(self):

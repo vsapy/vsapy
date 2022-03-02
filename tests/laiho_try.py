@@ -8,7 +8,7 @@ from vsapy.laiho import *
 if "__main__" in __name__:
 
     num_vecs = 2
-    vlist = vsa.randvec((num_vecs,100), vsa_type=VsaType.Laiho, bits_per_vec=20)
+    vlist = vsa.randvec((num_vecs,100), vsa_type=VsaType.Laiho, bits_per_slot=20)
 
     sumv = Laiho.sum(vlist)
     sumvn = Laiho.normalize(sumv)
