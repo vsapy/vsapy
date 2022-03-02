@@ -138,7 +138,7 @@ def to_vsa_type(sv, vsa_type):
     raise ValueError
 
 
-def randvec(dims, *args, vsa_type=VsaType.BSC, bits_per_slot=None, **kwargs):
+def randvec(dims, *args, vsa_type=VsaType.BSC, **kwargs):
     """
     :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.
     :param word_size: numpy's word size parameter, e.g. for BSCs wordsize=8 becomes 'uint8'.
@@ -147,7 +147,7 @@ def randvec(dims, *args, vsa_type=VsaType.BSC, bits_per_slot=None, **kwargs):
     """
     subclass = VsaBase.get_subclass(vsa_type)
     if subclass:
-        return subclass.randvec(dims, *args, vsa_type=vsa_type, bits_per_slot=bits_per_slot, **kwargs)
+        return subclass.randvec(dims, *args, vsa_type=vsa_type, **kwargs)
     else:
         raise ValueError
 
