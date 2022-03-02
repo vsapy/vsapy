@@ -1,10 +1,8 @@
-from vsapy.logger_utils import *
-from vsapy.helpers import *
-from build_docs import buildacts_from_json, xorBind
-from vsapy.role_vectors import *
+import numpy as np
 import vsapy as vsa
-from vsapy.cspvec import *
-from build_docs import VsaTokenizer
+from vsapy.vsatype import VsaType, VsaBase
+from vsapy.bag import BagVec
+
 
 
 
