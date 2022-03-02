@@ -48,10 +48,10 @@ if "__main__" in __name__:
           "result. Lets swap out the letter 'd' for an 'a'"
     abcde_veclist[3] = symbol_dict['a']
     print(msg)
-    abcde_bag1 = BagVec(abcde_veclist)
+    abcde_bag2 = BagVec(abcde_veclist)
     for c in symbols[1:11]:
         # Note that we want to reference the vsa vector of class BagVec which is self.myvec, i.e. abcde_bag1.myvec
-        hs = vsa.hsim(symbol_dict[c], abcde_bag1.myvec)
+        hs = vsa.hsim(symbol_dict[c], abcde_bag2.myvec)
         print(f"{c}={hs:0.4f} <--{ ' match' if hs > 0.53 else 'no match' }")
 
     print("notice that the 'a' now has a higher hsim than {b,c,e} and that 'd' is no match.")
@@ -61,10 +61,10 @@ if "__main__" in __name__:
     "This will result in only 'a' being detected"
     print(msg)
     abcde_veclist[4] = symbol_dict['a']
-    abcde_bag2 = BagVec(abcde_veclist)
+    abcde_bag3 = BagVec(abcde_veclist)
     for c in symbols[1:11]:
         # Note that we want to reference the vsa vector of class BagVec which is self.myvec, i.e. abcde_bag1.myvec
-        hs = vsa.hsim(symbol_dict[c], abcde_bag2.myvec)
+        hs = vsa.hsim(symbol_dict[c], abcde_bag3.myvec)
         print(f"{c}={hs:0.4f} <--{ ' match' if hs > 0.53 else 'no match' }")
 
     print("notice that only 'a' matches! Do you know why?")
