@@ -138,16 +138,17 @@ def to_vsa_type(sv, vsa_type):
     raise ValueError
 
 
-def randvec(dims, *args, vsa_type=VsaType.BSC, **kwargs):
+#def randvec(dims, *args, vsa_type=VsaType.BSC, **kwargs):
+def randvec(dims, *args, **kwargs):
     """
     :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.
     :param word_size: numpy's word size parameter, e.g. for BSCs wordsize=8 becomes 'uint8'.
     :param vsa_type: type of VSA subclass to create from VsaType class.
     :return: a matrix of vectors of shape 'dims'.
     """
-    subclass = VsaBase.get_subclass(vsa_type)
+    subclass = VsaBase.get_subclass(kwargs['vsa_type'])
     if subclass:
-        return subclass.randvec(dims, *args, vsa_type=vsa_type, **kwargs)
+        return subclass.randvec(dims, *args, **kwargs)
     else:
         raise ValueError
 
