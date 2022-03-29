@@ -505,7 +505,7 @@ def buildacts_from_csv(actdict, vsa_tok, no_acts=10000, no_scenes_per_act=10000,
                         lcnt += 1
                         v = vsa_tok.chunkSentenceVector(l)
                         if v is None:
-                            log.warn('buildacts_from_nltk_xml: Vector Returned is NONE for line=>{}<'.format(l))
+                            log.warning('buildacts_from_nltk_xml: Vector Returned is NONE for line=>{}<'.format(l))
                         else:
                             lineVecs.append(v)
 
@@ -561,7 +561,7 @@ def buildacts_from_json(_play, vsa_tok, no_acts=10000, no_scenes_per_act=10000, 
                             lcnt += 1
                             v = vsa_tok.chunkSentenceVector(l)
                             if v is None:
-                                log.warn('buildacts_from_nltk_xml: Vector Returned is NONE for line=>{}<'.format(l))
+                                log.warning('buildacts_from_nltk_xml: Vector Returned is NONE for line=>{}<'.format(l))
                                 vsa_tok.chunkSentenceVector(l)
                             else:
                                 lineVecs.append(v)
@@ -646,7 +646,7 @@ def buildacts_from_nltk_xml(fname, vsa_tok, no_acts=10000, no_scenes_per_act=100
                             lcnt += 1
                             v = vsa_tok.chunkSentenceVector(l)
                             if v is None:
-                                log.warn('buildacts_from_nltk_xml: Vector Returned is NONE for line=>{}<'.format(l))
+                                log.warning('buildacts_from_nltk_xml: Vector Returned is NONE for line=>{}<'.format(l))
                             else:
                                 lineVecs.append(v)
 
@@ -792,15 +792,20 @@ if __name__ == '__main__':
 
 
     # my_r2b = Real2Binary(300, 10000, seed=951753)
-    role_vec_data = create_role_data(data_files=None, vec_len=10000, rand_seed=123)
+    vsa_type = VsaType.LaihoX
+    if vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX:
+        role_vecs = create_role_data(vec_len=1000, rand_seed=None, force_new_vecs=True,
+                                     vsa_type=vsa_type, bits_per_slot=1024)
+    else:
+        role_vecs = create_role_data(data_files=None, vec_len=10000, rand_seed=123, vsa_type=vsa_type)
 
     skip_words = {}
-    skip_words['a'] = PackedVec(role_vec_data.symbol_dict['a'])
-    skip_words['A'] = PackedVec(role_vec_data.symbol_dict['A'])
-    skip_words['I'] = PackedVec(role_vec_data.symbol_dict['I'])
-    skip_words['O'] = PackedVec(role_vec_data.symbol_dict['O'])
+    skip_words['a'] = PackedVec(role_vecs.symbol_dict['a'])
+    skip_words['A'] = PackedVec(role_vecs.symbol_dict['A'])
+    skip_words['I'] = PackedVec(role_vecs.symbol_dict['I'])
+    skip_words['O'] = PackedVec(role_vecs.symbol_dict['O'])
 
-    vsa_tok = VsaTokenizer(role_vec_data, usechunksforWords,
+    vsa_tok = VsaTokenizer(role_vecs, usechunksforWords,
                            allow_skip_words=allow_word_skip, skip_words=skip_words,
                            skip_word_criterion=lambda w: False)  # In this case, the lambda is just disabling skip_words
 
@@ -811,26 +816,29 @@ if __name__ == '__main__':
     docs = []
     run_log = []
     for kk, infn, outfn, parse_func in runlist:
+        vsa_tok.total_word_count = 0
+        vsa_tok.miss_from_word2vec.clear()
+        vsa_tok.linecheck.clear()
         startTime = timeit.default_timer()
-        try:
-            vsa_tok.total_word_count = 0
-            vsa_tok.miss_from_word2vec.clear()
-            vsa_tok.linecheck.clear()
-            acts, scenes, linecheck = parse_func(infn, vsa_tok,
-                                                 no_acts=no_acts,
-                                                 no_scenes_per_act=no_scenes_per_act,
-                                                 report_input_lines=True)
-            msg = f"{kk}:Total word count={vsa_tok.total_word_count}, unique word count={len(vsa_tok.seen_words)}, words missing from word2vec model={len(vsa_tok.miss_from_word2vec)}"
-            run_log.append(msg)
-            print(msg)
-            print(vsa_tok.miss_from_word2vec)
-        except Exception as e:
-            print(f"******ERROR: {e}")
+        acts, scenes, linecheck = parse_func(infn, vsa_tok,
+                                             no_acts=no_acts,
+                                             no_scenes_per_act=no_scenes_per_act,
+                                             report_input_lines=True)
+        msg = f"{kk}:Total word count={vsa_tok.total_word_count}, " \
+              f"unique word count={len(vsa_tok.seen_words)}, " \
+              f"words missing from word2vec model={len(vsa_tok.miss_from_word2vec)}, " \
+              f"Time Taken = {timeit.default_timer() - startTime:0.4f}"
+        run_log.append(msg)
+        print(msg)
+        print(vsa_tok.miss_from_word2vec)
 
-        top_chunk = CSPvec.buildchunks(kk, acts,  role_vec_data)
+        top_chunk = CSPvec.buildchunks(kk, acts, role_vecs)
         if not os.path.exists(file_path):  # Make sure the output directory exists.
             os.makedirs(file_path)  # Create output directory if not exists.
-        serialise_vec_hierarchy(top_chunk, outfn)
+        if vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX:
+            serialise_object(top_chunk, outfn)
+        else:
+            serialise_vec_hierarchy(top_chunk, outfn)
         print(f"\n\n{kk.upper()} Time taken to build representation: {timeit.default_timer() - startTime}\n\n")
         del top_chunk  # Free up memory
         del acts
