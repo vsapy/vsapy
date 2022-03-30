@@ -5,6 +5,40 @@ class TernZero(Tern):
 
 
     @classmethod
+    def unpackbits(cls, v):
+        """
+        Unpacks the binary vector packed via TernZero.packbits() as a TernZero vector.
+        :param v: ndarray, packed vector is concatenation of binary vector and zerobits vector.
+        :type v: ndarray type uint8
+        :return: TernZero vecor with zeros set correctly.
+        :rtype: TernZero vector.
+        """
+        vbin = np.unpackbits(v).astype('int8')
+        # split off the zeros
+        zero_bits = vbin[len(vbin)//2:]
+        v1 = vbin[:len(vbin)//2]
+        v1[v1 == 0] = -1 # All zeros represent -1 or zero. set all to -1.
+        v2 = np.sum([v1, zero_bits], axis=0)  # There are 1's in ZeroBits where output vector should be zero
+        return VsaBase(v2, vsa_type=VsaType.TernZero)
+
+    @classmethod
+    def packbits(cls, v):
+        """
+        To keep track of the zeros we extend the vector with a mask that can be used to recover them.
+        This makes the packed vector twice as long as an ordinary Tern or BSC vec.
+        :param v: TernZero vec to be packed
+        :type v: TernZero
+        :return: packed vector.
+        :rtype: numpy unit8
+        """
+        # Get a mask of all of the zeros
+        zero_bits = (v == 0)
+        v[v == -1] = 0  # convert -1 to zeros
+        # concat the zero mask to the end of v
+        outv = np.concatenate((v, zero_bits))
+        return np.packbits(outv)
+
+    @classmethod
     def normalize(cls, sv, seqlength=None, rv=None):
         """
         Normalize the VSA vector
