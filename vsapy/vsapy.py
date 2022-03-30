@@ -1,40 +1,44 @@
 from __future__ import print_function  # (at top of module)
 
-from .vsatype import *
-from .bsc import *
-from .tern import *
-from .ternzero import *
-from .hrr import *
 import math
-from scipy import special as scm
+from vsapy import *
+from .vsatype import *
+#from vsapy.bag import BagVec
+from .bsc_stats import subvec_mean as bsc_mean
+from .sparse_stats import subvec_mean as snn_mean
 
 
-def get_hd_threshold(num_vecs):
-    """
-    :param num_vecs: This is the number of vectors to be added via majority_sum
-    :return: The normalised hamming distance similarity between an individual vector of the sum and the majority_sum.
-             0 = exact match. If the vectors being added are 1000 bits long then a result of 0.25 means that
-             of the 1000 bits only 250 bits will be different than those contained in each individual vector.
-             Or putting it the other way around 75% of the bits in each individual vector in the sum will match to the
-             bits in the resultant majority_sum vector.
+def subvec_mean(sub_vecs, vsa_type=None, bits_per_slot=None):
     """
 
-    if num_vecs == 1:
-        return 1.0
+    :param sub_vecs: This is the number of vectors to be added via majority_sum or a bundled vector (subclass of BagVec)
+    containing a vector count.
+    :type sub_vecs:
+    :param vsa_type: when passing a vector count, specifies the type of vecrtors being bundled
+    :type vsa_type:
+    :return: expected mean value of any subvector in a bundle of num_vecs=sub_vecs.
+    :rtype:
+    """
 
-    # Majority sum needs an odd number of vectors, an additional random vector is used when the sum contains
-    # and even number of vectors, hence if we have an even number here it is equivalent to calculating on the
-    # num_vecs + 1
-    if num_vecs % 2 > 0:
-        num_vecs -= 1
+    if not isinstance(sub_vecs, vsapy.BagVec):
+        num_vecs = sub_vecs
+    else:
+        num_vecs = sub_vecs.vec_cnt
+        if vsa_type is not None and vsa_type != sub_vecs.vsa_type:
+            raise ValueError("sub_vecs should be in integer when passing a vsa_type.")
+        vsa_type = sub_vecs.vsa_type
+        if sub_vecs.vsa_type == VsaType.Laiho:
+            bits_per_slot = sub_vecs.myvec.bits_per_slot
 
-    P = 0  # Cumulative permutation sum
-    for j in range(num_vecs // 2, num_vecs + 1):
-        P = P + scm.comb(num_vecs, j)
+    if vsa_type:
+        if vsa_type == VsaType.HRR:
+            raise NotImplementedError(f'subvec_mean not implemented for type{VsaType.HRR}.')
+        elif vsa_type == VsaType.Laiho:
+            return snn_mean(num_vecs, bits_per_slot, 1)
+        else:
+            return bsc_mean(num_vecs)
 
-    hd = 1.0 - P / 2 ** num_vecs
-
-    return hd
+    raise ValueError("vsa_type must be specifed.")
 
 
 class Real2Binary(object):
@@ -146,14 +150,15 @@ def randvec(dims, *args, **kwargs):
     :param vsa_type: type of VSA subclass to create from VsaType class.
     :return: a matrix of vectors of shape 'dims'.
     """
-    subclass = VsaBase.get_subclass(kwargs['vsa_type'])
+    vsa_type = kwargs.get("vsa_type", VsaType.BSC)
+    subclass = VsaBase.get_subclass(vsa_type=vsa_type)
     if subclass:
         return subclass.randvec(dims, *args, **kwargs)
     else:
         raise ValueError
 
 
-def normalize(a, seqlength=None, rv=None):
+def normalize(a, *args, **kwargs):
     """
     Normalize the VSA vector
     :param a: input VSA vector
@@ -161,7 +166,7 @@ def normalize(a, seqlength=None, rv=None):
     :param rv: Optional random vector, used for splitting ties on binary and ternary VSA vectors.
     :return: new VSA vector
     """
-    return a.normalize(a, seqlength, rv)
+    return a.normalize(a, *args, **kwargs)
 
 
 def bind(a, b):
