@@ -1,8 +1,9 @@
 from vsapy.logger_utils import *
 from vsapy.helpers import *
 from build_docs import buildacts_from_json, xorBind
-from vsapy.role_vectors import *
+import vsapy.vsapy as vsa
 from vsapy.cspvec import *
+from vsapy.bag import BagVec
 from build_docs import VsaTokenizer
 
 
@@ -27,16 +28,26 @@ def search_chunks(top_chunk, target_vec):
     return best_match, max_sim
 
 if __name__ in "__main__":
-    role_vecs = create_role_data(vec_len=10000, rand_seed=123)
+    vsa_type = VsaType.LaihoX
+    if vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX:
+        role_vecs = create_role_data(vec_len=1000, rand_seed=None, force_new_vecs=True,
+                                     vsa_type=vsa_type, bits_per_slot=1024)
+    else:
+        role_vecs = create_role_data(data_files=None, vec_len=10000, rand_seed=123, vsa_type=vsa_type)
+
     vsa_tok = VsaTokenizer(role_vecs, True,
                            allow_skip_words=False, skip_words={},
                            skip_word_criterion=lambda w: False)  # In this case, the lambda is just disabling skip_words
 
+    # Create a sentence encoded with CSPvec encodiing
+    sentence = "the cat sat on the mat"
+    print(f'\nCreating a sentence: "{sentence}"')
     cat_mat = vsa_tok.chunkSentenceVector("the cat sat on the mat")
-    cat_mat_seq = cat_mat.as_seq()
+    print(f'\nAdding sequence control to the sentence')
+    cat_mat_seq = cat_mat.as_seq()  # Add sequence control vectors
 
     # Now decode the sequence
-    print("\n\nWhen we create the sequence the first step is exposed.")
+    print("\nWhen we create the sequence the first step is exposed.")
     print("We can then step thro the sequence...")
     while True:
         best_chunk, hs = search_chunks(cat_mat, cat_mat_seq)
