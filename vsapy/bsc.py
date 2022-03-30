@@ -13,6 +13,14 @@ class BSC(VsaBase):
         return 'uint8'
 
     @classmethod
+    def unpackbits(cls, v):
+        return VsaBase(np.unpackbits(v), vsa_type=VsaType.BSC)
+
+    @classmethod
+    def packbits(cls, v):
+        return np.packbits(v)
+
+    @classmethod
     def randvec(cls, dims, word_size=8, vsa_type=VsaType.BSC):
         """
         :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.
@@ -49,7 +57,7 @@ class BSC(VsaBase):
         return cls.bind(a, b)
 
     @classmethod
-    def normalize(cls, sv, seqlength=None, rv=None):
+    def normalize(cls, sv, seqlength, *args,  rv=None, **kwargs):
         """
         Normalize the VSA vector
         :param sv: input VSA vector
