@@ -1,3 +1,5 @@
+import numpy as np
+
 from .vsatype import *
 
 
@@ -10,6 +12,17 @@ class Tern(VsaBase):
         :return: the default numpy datatype for this type of VSA.
         """
         return 'int8'
+
+    @classmethod
+    def unpackbits(cls, v):
+        vbin = np.unpackbits(v).astype('int8')
+        vbin[vbin == 0] = -1
+        return VsaBase(vbin, vsa_type=VsaType.Tern)
+
+    @classmethod
+    def packbits(cls, v):
+        v[v == -1] = 0
+        return np.packbits(v)
 
     @classmethod
     def randvec(cls, dims, word_size=8, vsa_type=VsaType.Tern):
