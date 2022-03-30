@@ -8,7 +8,8 @@ class VsaType(IntEnum):
     Tern = 2  # i.i.d Ternary spatter code (+1, -1)
     TernZero = 3  # Ternary spatter code but allows don't care (+1, 0, -1) where 0 means tie occured in bundling
     HRR = 4  # Holographic Reduced Representation
-    Laiho = 5
+    Laiho = 5  # Laiho full implementation
+    LaihoX = 6  # Laiho simplified - the first nonzero element is taken in bundling operations
 
 
 class VsaBase(np.ndarray):
@@ -30,7 +31,7 @@ class VsaBase(np.ndarray):
             obj = np.asarray(input_array).view(subclass)
             # add the new attribute to the created instance
             obj.vsa_type = vsa_type
-            if vsa_type == VsaType.Laiho:
+            if vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX:
                 assert bits_per_slot is not None, "you must supply value for bits_per_slot"
                 obj.slots = input_array.shape[-1]
                 obj.bits_per_slot = bits_per_slot
@@ -136,7 +137,7 @@ class VsaBase(np.ndarray):
         return VsaBase(np.packbits(self), self.vsa_type)
 
     @classmethod
-    def randvec(cls, dims, word_size=8, vsa_type=VsaType.BSC, bits_per_slot=None):
+    def randvec(cls, *args, **kwargs):
         """
         :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.
         :param word_size: numpy's word size parameter, e.g. for BSCs wordsize=8 becomes 'uint8'.
@@ -146,7 +147,7 @@ class VsaBase(np.ndarray):
         raise NotImplementedError('Subclass must implment "validate_operand()"')
 
     @classmethod
-    def normalize(cls, sv, seqlength=None, rv=None):
+    def normalize(cls, sv, *args, **kwargs):
         """
         Normalize the VSA vector
         :param a: input VSA vector
@@ -226,4 +227,4 @@ class VsaBase(np.ndarray):
         Maintains vsa_type custom attribute when perfoming numpy.sum()
         Todo: there is probably a better way than this.
         """
-        return VsaBase(np.sum(ndarray, *args, **kwargs), vsa_type=ndarray[0].vsa_type)
+        return VsaBase(np.sum(np.array(ndarray), axis=0, *args, **kwargs), vsa_type=ndarray[0].vsa_type)
