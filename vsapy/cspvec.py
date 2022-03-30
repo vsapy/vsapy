@@ -1,3 +1,4 @@
+import vsapy
 from vsapy.role_vectors import *
 
 from vsapy.logger_utils import *
@@ -9,7 +10,7 @@ class CSPvec(RawVec):
     mythreadlock = threading.RLock()
     next_chunk_id = 0
     break_on_chunk_id = -1
-    trace_threshold = 0.53  # 0.547 #0.528  #0.53  # 0.525  # 0.54  # 0.532
+    trace_threshold = 0.013  # 0.53  # 0.547 #0.528  #0.53  # 0.525  # 0.54  # 0.532
 
     # ------------------------------------------------------------------------
     # If we change this list we MUST update calc_match_level():
@@ -51,7 +52,7 @@ class CSPvec(RawVec):
         # to detect that the next vector is a stop vector.
         # The spinoff benefit is that we get better matches because vector lists ending in the same
         # vector will not differ by the stop vector.
-        self.stopvec = vsa.bind(self.roles.stopvec, np.roll(veclist[-1], 1))
+        self.stopvec = vsa.bind(np.roll(veclist[-1], 1), self.roles.stopvec)
 
         if self.isTerminalNode:
             # we are creating a basic compound vector these do not need a stop vector, however if the number of vectors
@@ -63,17 +64,17 @@ class CSPvec(RawVec):
         else:
             veclist.append(self.stopvec)
 
-        rawvec, vec_cnt, norm_vec  = self.addvecs(veclist)
-        super(CSPvec, self).__init__(rawvec, vec_cnt)
+        permed_vec_list = self.permveclist(veclist)
+        super(CSPvec, self).__init__(permed_vec_list)
 
         if self.isTerminalNode:
             # If we are a terminal node we will never look for our own stop_vec. However, we do want to detect the
             # parent vector's stop_vec.  We therefore pre-set the stop_vec to match with self.myvec because, if this
             # vec is in the last position of a higher-level list, self.myvec will be used to build the parent's stopvec.
-            self.stopvec = vsa.bind(self.roles.stopvec, np.roll(self.myvec, 1))
+            self.stopvec = vsa.bind(np.roll(self.myvec, 1), self.roles.stopvec)
     
 
-    def addvecs(self, veclist):
+    def permveclist(self, veclist):
         """
         Adding like this, p0 * a^1 + (p0 * p1 * b^2) + (p0 * p1 * p2 * c^3) + ... Where '^' means cyclic-shift
         Using this method we gain benefit because we will get better similarity matchups
@@ -84,7 +85,7 @@ class CSPvec(RawVec):
         """
 
         if len(veclist) == 1:
-            return veclist[0], 1, veclist[0]
+            return veclist
 
         try:
             pindex = 0
@@ -98,15 +99,12 @@ class CSPvec(RawVec):
                 piv = vsa.bind(piv, self.permVecs[pindex])
                 v = vsa.bind(piv, np.roll(y, pindex + 1))
                 role_filler_list.append(v)
-                #sumvec = sumvec + v
 
-            sumvec = RawVec(role_filler_list)
         except IndexError as e:
             pindex = pindex  # For Debug
             raise IndexError(e)
 
-        #nv = vsa.normalize(sumvec, cnt)
-        return sumvec.rawvec, sumvec.vec_cnt, sumvec.myvec
+        return role_filler_list
 
     @property
     def isTerminalNode(self):
@@ -186,7 +184,7 @@ class CSPvec(RawVec):
         return dbcnks
 
     def unbind_one_step(self, invec, pindex):
-        return np.roll(vsa.bind(np.roll(self.roles.permVecs[pindex], -1 * pindex), invec), -1)
+        return np.roll(vsa.unbind(invec, np.roll(self.roles.permVecs[pindex], -1 * pindex)), -1)
 
     def recover_stop_vec_from_vec_count(self, invec, vec_count):
         invec1 = invec[:]
@@ -201,10 +199,11 @@ class CSPvec(RawVec):
 
         # We write the total number of sub-vectors into the vector, if the number of sub-vecs in self.vec_cnt
         # is even, then the total number of vecs will be extended by 1 during normalisation.
-        vec_count = self.vec_cnt + 2
-        if vec_count % 2 == 0:
-            vec_count += 1  # An extra vec is added during normalization.
 
+        vec_count = self.vec_cnt + 2
+        if not isinstance(self.myvec, vsa.Laiho):
+            if vec_count % 2 == 0:
+                vec_count += 1  # An extra vec is added during normalization.
         sub_vecs = [
             self.rawvec,
             self.roles.tvec_tag,  # metadata, identifies the start of a sequence vector
@@ -212,12 +211,34 @@ class CSPvec(RawVec):
         ]
 
         bagvec = BagVec(sub_vecs, vec_count)
-        seq_vec = VsaBase(bagvec.myvec, vsa_type=bagvec.myvec.vsa_type)
-        start_vec = np.roll(vsa.bind(self.roles.permVecs[0], seq_vec), -1)
+        if isinstance(self.myvec, vsa.Laiho):
+            seq_vec = VsaBase(bagvec.myvec, vsa_type=bagvec.myvec.vsa_type, bits_per_slot=sub_vecs[0].bits_per_slot)
+        else:
+            seq_vec = VsaBase(bagvec.myvec, vsa_type=bagvec.myvec.vsa_type)
+
+        start_vec = self.unbind_one_step(seq_vec, 0)  # Zero is the start pindex
 
         log.info(f"{self.chunk_id:04d}: START_VEC: NoSubVecs({vec_count}) vec_len={len(start_vec)} | {self.aname}")
 
         return start_vec
+
+    def match_theshold(self, invec):
+        if isinstance(invec, vsapy.Laiho):
+            M = len(invec)
+
+            exprv = 1 / invec.bits_per_slot  # Probability of a match between random vectors
+            var_rv = M * (exprv * (1 - exprv))  # Varience (un-normalised)
+            std_rv = math.sqrt(var_rv)  # Stdev (un-normalised)
+            hdrv = M / invec.bits_per_slot + 4.4 * std_rv  # Un-normalised hsim of two randomvectors adjusted by 'n' stdevs
+
+            # expected_hd = 1 / invec.bits_per_slot  # Normalised expeced value
+            # stdev = math.sqrt(len(invec) * expected_hd * (1 - expected_hd)) / len(invec)
+            return hdrv/M
+        elif invec.vsa_type == VsaType.HRR:
+            stdev = math.sqrt(1 / len(invec) * (101 / 100))  # Assuming max 100 vectors
+            return 0 + 4.4 * stdev  # mean=0 + 4.4 * stdev
+        else:
+            return 0.53
 
     def check_for_activation(self, invec, myvec, required_threshhold):
 
@@ -234,12 +255,14 @@ class CSPvec(RawVec):
     def get_current_permutation(self, invec):
         if self.check_for_start_tag_vec(invec):
             return -1
+        match_threshold = self.match_theshold(invec)
+
         pindex = 0
         pvec = self.roles.tvec_tag.copy()
         for p in self.roles.permVecs:
-            pvec = np.roll(vsa.bind(pvec, np.roll(p, pindex)), -1)
+            pvec = self.unbind_one_step(pvec, abs(pindex))
             hd = vsa.hsim(pvec, invec)
-            if hd >= CSPvec.trace_threshold:
+            if hd >= match_threshold:
                 # We know if we are better than threshold that we have the best match on role_posn finder
                 # because only one pvec.role_posn finder combo will ever be a match
                 break
@@ -251,7 +274,8 @@ class CSPvec(RawVec):
 
     def reverse_unbind(self, invec, debug_prev_vec=None):
         pindex = self.get_current_permutation(invec)
-        reverse_vec = np.roll(vsa.bind(np.roll(self.roles.permVecs[pindex], -1 - pindex), invec), 1)
+        reverse_vec = np.roll(vsa.bind(invec, np.roll(self.roles.permVecs[pindex], -1 - pindex)), 1)
+
         if debug_prev_vec is not None:
             rhd = vsa.hsim(debug_prev_vec, reverse_vec)
         return reverse_vec, pindex - 1
@@ -259,7 +283,7 @@ class CSPvec(RawVec):
     def forward_unbind(self, invec):
         try:
             pindex = 0 - self.get_current_permutation(invec) - 1
-            nextvec = np.roll(vsa.bind(np.roll(self.roles.permVecs[0 - pindex], pindex), invec), -1)
+            nextvec = np.roll(vsa.unbind(invec, np.roll(self.roles.permVecs[0 - pindex], pindex)), -1)
         except IndexError:
             invec = invec
 
@@ -320,10 +344,10 @@ class CSPvec(RawVec):
         return nextvec
 
     def check_for_stopvec(self, invec):
-        return vsa.hsim(self.stopvec, invec) > CSPvec.trace_thresholds[0]
+        return vsa.hsim(self.stopvec, invec) > self.match_theshold(invec)
 
     def check_for_start_tag_vec(self, invec):
-        return vsa.hsim(self.roles.tvec_tag, invec) > CSPvec.trace_thresholds[0]
+        return vsa.hsim(self.roles.tvec_tag, invec) > self.match_theshold(invec)
 
     def flattenchunkheirachy(self, allchunks, skip_worker_chunks=False):
         if self.isTerminalNode:
