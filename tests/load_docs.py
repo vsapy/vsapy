@@ -40,12 +40,11 @@ def load_vsa_document_set(usechunksforWords,
 
         docs[short_info] = top_chunk
 
-
     return docs
 
 if __name__ == '__main__':
 
-    levels_to_extract = [0]
+    levels_to_extract = [0, 1]
     docs = load_vsa_document_set(usechunksforWords=True, use_word2vec=False, use_shaping=False, prepend_level_labels=True)
 
     # compare documents at the document level
@@ -64,7 +63,7 @@ if __name__ == '__main__':
         chunks = []
         # pass a list of the levels you want to retrieve, in this case [0, 1] = the whole play and each act.
         # passing [2] would retrieve only the scene data.
-        BareChunk.get_levels_as_list(v1, [0, 1], 0, chunks)
+        BareChunk.get_levels_as_list(v1, levels_to_extract, 0, chunks)
         doc_chunks[k1] = chunks
         min_entries = min(min_entries, len(chunks))
 
@@ -74,9 +73,9 @@ if __name__ == '__main__':
                 continue
             print(f"\n\n{k1}<->{k2} ")
             for i1 in doc_chunks[k1]:
-                i1_level = i1.get_level_number()
+                i1_level = BareChunk.get_level_number(i1.aname)
                 for i2 in doc_chunks[k2]:
-                    i2_level = i2.get_level_number()
+                    i2_level = BareChunk.get_level_number(i2.aname)
                     if i1_level == i2_level:
                         print(f"hsim={vsa.hsim(i1.myvec, i2.myvec):0.4f} : {i1.aname}<->{i2.aname}")
 
