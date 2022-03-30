@@ -1,6 +1,8 @@
+import math
+from scipy import stats
 import vsapy
 from .vsatype import *
-
+from .helpers import mode
 
 class Laiho(VsaBase):
     vsatype = VsaType.Laiho
@@ -13,7 +15,7 @@ class Laiho(VsaBase):
         return 'int16'
 
     @classmethod
-    def unpackbits(cls, v):
+    def expandbits(cls, v):
         # Init sparse bound vector (s_bound) with zeros
         s_bound = np.zeros((v.slots, v.bits_per_slot))  # Create a slotted vector with
 
@@ -25,8 +27,13 @@ class Laiho(VsaBase):
         return s_bound
 
     @classmethod
+    def unpackbits(cls, v):
+        # Laiho vecs are manipulated in packed format.
+        return v
+
+    @classmethod
     def packbits(cls, v):
-        # Laiho vecs are manipulated in packed format except for bundling.
+        # Laiho vecs are manipulated in packed format.
         return v
 
     @classmethod
@@ -90,15 +97,36 @@ class Laiho(VsaBase):
 
 
     @classmethod
+    def sum2(cls, vlist, *args, **kwargs):
+        """
+        Maintains vsa_type custom attribute when perfoming numpy.sum()
+        Todo: there is probably a better way than this.
+        """
+        # Super slow method compared to sum() but was used as a sanity checker.
+        unpacked_list = [v.expandbits(v).flatten() for v in vlist]
+        orvec = np.sum(unpacked_list, axis=0).reshape(vlist[0].slots, vlist[0].bits_per_slot)
+        outvec = np.ma.masked_array(orvec, (orvec == 0)).argmax(axis=1)
+
+        return VsaBase(np.array(outvec), vsa_type=VsaType.Laiho, bits_per_slot=vlist[0].bits_per_slot)
+
+    @classmethod
+    def sum1(cls, vlist, *args, **kwargs):
+        """
+        Maintains vsa_type custom attribute when perfoming numpy.sum()
+        Todo: there is probably a better way than this.
+        """
+
+        # This method is 2X slower than helpers.py mode() !
+        return VsaBase(stats.mode(vlist)[0][0], vsa_type=VsaType.Laiho, bits_per_slot=vlist[0].bits_per_slot)
+
+    @classmethod
     def sum(cls, vlist, *args, **kwargs):
         """
         Maintains vsa_type custom attribute when perfoming numpy.sum()
         Todo: there is probably a better way than this.
         """
-        unpacked_list = [v.unpackbits(v).flatten() for v in vlist]
-        sumv = np.sum(unpacked_list, axis=0)
-        return VsaBase(sumv.reshape(vlist[0].slots, vlist[0].bits_per_slot),
-                       vsa_type=VsaType.Laiho, bits_per_slot=vlist[0].bits_per_slot)
+        # helpers.py mode() is 2x faster than scipy.stats.mode() !
+        return VsaBase(mode(vlist, axis=0)[0], vsa_type=VsaType.Laiho, bits_per_slot=vlist[0].bits_per_slot)
 
     @classmethod
     def normalize(cls, sv, seqlength=None, rv=None):
@@ -131,11 +159,21 @@ class Laiho(VsaBase):
         :return: normalized hamming distance between a and b. 1.0=exact match.
         """
         assert a.vsa_type == b.vsa_type, "Mismatch vsa_types"
-        if b.vsa_type == VsaType.Laiho:
+        if isinstance(b, Laiho):
             match = np.count_nonzero(a == b)
             return match / a.slots
 
         raise ValueError("Mismatch vsa_types")
 
+    @staticmethod
+    def slots_from_bsc_vec(bsc_dim, bits_per_slot):
+        return int(bsc_dim / math.log(bits_per_slot, 2))
 
+    @staticmethod
+    def bits_from_bsc_vec(bsc_dim, slots):
+        return int(2 ** (bsc_dim/slots))
+
+    @staticmethod
+    def bsc_dim_from_laiho(slots, bits_per_slot):
+        return int(slots * math.log(bits_per_slot, 2))
 
