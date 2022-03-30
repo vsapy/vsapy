@@ -4,8 +4,8 @@ import pickle
 import datetime
 from enum import IntEnum
 import numpy as np
-import vsapy as vsa
-from .vsatype import VsaBase, VsaType
+import vsapy.vsapy as vsa
+from vsapy.vsatype import *
 from vsapy.helpers import serialise_object
 
 
@@ -21,19 +21,21 @@ class TimeStamp(object):
         return t1obj.time() == t2obj.time()
 
 
-def createSymbolVectors(symbols, veclen, creation_data_time_stamp=None):
+def createSymbolVectors(symbols, *args, creation_data_time_stamp=None, **kwargs):
     if creation_data_time_stamp is None:
         creation_data_time_stamp = TimeStamp.get_creation_data_time_stamp()
     # A dictionary is slightly faster than Graham's list look up but only marginally....
     sym = {"creation_data_time_stamp": creation_data_time_stamp}
 
     for a in symbols:
-        sym[a] = vsa.randvec(veclen)
+        sym[a] = vsa.randvec(*args, **kwargs)
 
     return sym
 
 
-def create_base_vecs(start, end, veclen, time_stamp, ascii_names=True, creation_data_time_stamp = None):
+def create_base_vecs(start, end, veclen, ascii_names=True,
+                     creation_data_time_stamp=None, vsa_type=VsaType.BSC, **kwargs):
+
     if creation_data_time_stamp is None:
         time_stamp = TimeStamp.get_creation_data_time_stamp()
     else:
@@ -48,7 +50,7 @@ def create_base_vecs(start, end, veclen, time_stamp, ascii_names=True, creation_
             c = chr(x)
         else:
             c = x
-        base_vecs.update({c: vsa.randvec(veclen)})
+        base_vecs.update({c: vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)})
         list(base_vecs.items())
 
     return base_vecs
@@ -59,23 +61,24 @@ class PackedVec(object):
     Used to reduce memory storage overhead by keeping vectors packed.
     '''
     def __init__(self, v):
-        self.myvec = v
         self.vsa_type = v.vsa_type
+        self.myvec = v
 
     @property
     def myvec(self):
-        if self.vsa_type == VsaType.Laiho:
-            #return VsaBase(np.unpackbits(self.__myvec), self.vsa_type, bits_per_slot=self.bits_per_slot)
+        # performance for Laiho/X is slightly improved by not searching the subclass chain
+        if self.vsa_type == VsaType.Laiho or self.vsa_type == VsaType.LaihoX:
             return self.__myvec
         else:
-            return VsaBase(np.unpackbits(self.__myvec), self.vsa_type)
+            return VsaBase.get_subclass(self.vsa_type).unpackbits(self.__myvec)
 
     @myvec.setter
     def myvec(self, v):
-        if v.vsa_type == VsaType.Laiho:
+        # performance for Laiho/X is slightly improved by not searching the subclass chain
+        if isinstance(v, vsa.Laiho):
             self.__myvec = v
         else:
-            self.__myvec = np.packbits(v)
+            self.__myvec = v.packbits(v)
 
     @property
     def packed(self):
@@ -83,7 +86,7 @@ class PackedVec(object):
 
 
 class BagVec(PackedVec):
-    def __init__(self, veclist, vec_cnt=-1):
+    def __init__(self, veclist, vec_cnt=-1, myvec=None):
         """
 
         :param veclist: list of vectors to be majority-summed.
@@ -92,8 +95,12 @@ class BagVec(PackedVec):
                         veclist = [[2,1,3,5,0], [1,0,1,1,0,1]] then vec_cnt might = 7
                         because 1st vec could be an un-normallised sum of 6 vecs and the second vec is normalised.
         """
-        rawvec, vec_cnt, norm_vec = BagVec.bundle(veclist, vec_cnt)
-        super(BagVec, self).__init__(norm_vec)
+        if myvec is None:
+            rawvec, vec_cnt, myvec = BagVec.bundle(veclist, vec_cnt)
+        else:
+            assert vec_cnt >= 1, "you must specify parameter 'vec_cnt': number of vectors in this vector."
+
+        super(BagVec, self).__init__(myvec)
         self.vec_cnt = vec_cnt
 
     @property
@@ -111,8 +118,8 @@ class BagVec(PackedVec):
                 assert vec_cnt >= 1, "you must specify parameter 'vec_cnt': number of vectors in this vector."
                 rawvec = veclist  # veclist is a single [a1, a2, a3, ...] numpy column vector
                 return rawvec, vec_cnt,  vsa.normalize(veclist, vec_cnt, )
-        elif isinstance(veclist, list):    # i.e. only 1D array
-            if not isinstance(veclist[0], (list, np.ndarray)):
+        elif isinstance(veclist, list):
+            if not isinstance(veclist[0], (list, np.ndarray)):  # i.e. only 1D array
                 assert vec_cnt >= 1, "you must specify parameter 'vec_cnt': number of vectors in this vector."
                 rawvec = veclist  # veclist is a single [a1, a2, a3, ...] python list vector
                 return rawvec, vec_cnt,  vsa.normalize(veclist, vec_cnt, )
@@ -120,23 +127,33 @@ class BagVec(PackedVec):
             raise ValueError(" 'veclist' is not an array type.")
 
         # veclist contains a list of vectors t be added.
-        rawvec = veclist[0].sum(veclist, axis=0)
-        if vec_cnt >= 1:
-            # This enables passing in one or more un-normalized vectors in veclist. If vec_cnt >= 1 we assume that
-            # vec_cnt accounts for all un-normalised vectors in the list
-            norm_vec = vsa.normalize(rawvec, vec_cnt, )
-        else:
-            norm_vec = vsa.normalize(rawvec, len(veclist), )
+        sumv = veclist[0].sum(veclist)
+        if isinstance(sumv, vsa.Laiho):
+            rawvec = None
+            norm_vec = sumv
             vec_cnt = len(veclist)
+        else:
+            rawvec = sumv
+            if vec_cnt >= 1:
+                # This enables passing in one or more un-normalized vectors in veclist. If vec_cnt >= 1 we assume that
+                # vec_cnt accounts for all un-normalised vectors in the list
+                norm_vec = vsa.normalize(sumv, vec_cnt, )
+            else:
+                norm_vec = vsa.normalize(rawvec, len(veclist), )
+                vec_cnt = len(veclist)
 
         return rawvec, vec_cnt, norm_vec
 
 
 class RawVec(BagVec):
     def __init__(self, veclist, vec_cnt=-1):
-        rawvec, vec_cnt, norm_vec = RawVec.bundle(veclist, vec_cnt)
-        super(RawVec, self).__init__(rawvec, vec_cnt)
-        self.__rawvec = rawvec
+        rawvec, vec_cnt, myvec = BagVec.bundle(veclist, vec_cnt)
+        super(RawVec, self).__init__(None, vec_cnt, myvec=myvec)
+
+        if isinstance(veclist[0], (np.ndarray, list)) and isinstance(veclist[0], vsa.Laiho):
+            self.__rawvec = self.myvec
+        else:
+            self.__rawvec = rawvec
 
     @property
     def rawvec(self):
@@ -151,6 +168,7 @@ def serialise_vec_hierarchy(chunk_hierarchy, pathfn):
     bare_hamlet = BareChunk(chunk_hierarchy)
     serialise_object(bare_hamlet, pathfn)
     return
+
 
 class BareChunk(RawVec):
     def __init__(self, cnk):
@@ -187,8 +205,9 @@ class BareChunk(RawVec):
             for c in self.chunklist:
                 c.flattenchunkheirachy(allchunks, skip_worker_chunks)
 
-    def get_level_number(self):
-        return self.aname[self.aname.find("$")+1:self.aname.find("@")]
+    @staticmethod
+    def get_level_number(aname):
+        return aname[aname.find("$")+1:aname.find("@")]
 
     @staticmethod
     def add_level_labels(cnk, current_level, doc_prefix, label=''):
