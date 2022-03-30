@@ -11,7 +11,6 @@ from vsapy.bag import *
 from vsapy.helpers import *
 
 
-
 class RoleVecs(object):
     next_chunk_id = 0  # Used for debug to identify a particular chunk.
     symbols = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.;:,_'!?-[]&*"
