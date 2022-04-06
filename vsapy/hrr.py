@@ -13,6 +13,16 @@ class HRR(VsaBase):
         return 'float'
 
     @classmethod
+    def unpackbits(cls, v):
+        # HRR vecs are not packed
+        return v
+
+    @classmethod
+    def packbits(cls, v):
+        # HRR vecs are not packed
+        return v
+
+    @classmethod
     def randvec(cls, dims, word_size=8, vsa_type=VsaType.HRR):
         """
         :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.
@@ -67,7 +77,8 @@ class HRR(VsaBase):
             :param a: Vector
             :return: a / len(a)
             """
-            return sv / np.sum(sv ** 2.0) ** 0.5
+            v = np.asarray(sv)
+            return VsaBase(v / np.sum(v ** 2.0) ** 0.5, vsa_type=VsaType.HRR)
         raise ValueError("Mismatch vsa_types")
 
     @classmethod
