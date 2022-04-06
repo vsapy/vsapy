@@ -21,7 +21,7 @@ def subvec_mean(num_vecs):
     """
 
     if num_vecs == 1:
-        return float(0.0)
+        return float(1.0)
 
     # Majority sum needs an odd number of vectors, an additional random vector is used when the sum contains
     # and even number of vectors, hence if we have an even number here it is equivalent to calculating on the
@@ -35,9 +35,8 @@ def subvec_mean(num_vecs):
 
     for _ in range(num_vecs):
         P /= 2
-    hd = 1.0 - P
 
-    return float(hd)
+    return float(P)
 
 
 def sum_combis(N, k):
