@@ -1,11 +1,18 @@
-from __future__ import print_function  # (at top of module)
-
 import math
+import vsapy as vsa
 from vsapy import *
 from .vsatype import *
 #from vsapy.bag import BagVec
 from .bsc_stats import subvec_mean as bsc_mean
 from .sparse_stats import subvec_mean as snn_mean
+
+
+def random_threshold(*args, **kwargs):
+    return VsaBase.random_threshold(*args, **kwargs)
+
+
+def subvec_mean_hd(num_vecs):
+    return 1.0 - subvec_mean(num_vecs)
 
 
 def subvec_mean(sub_vecs, vsa_type=None, bits_per_slot=None):
@@ -20,20 +27,20 @@ def subvec_mean(sub_vecs, vsa_type=None, bits_per_slot=None):
     :rtype:
     """
 
-    if not isinstance(sub_vecs, vsapy.BagVec):
+    if not isinstance(sub_vecs, vsa.BagVec):
         num_vecs = sub_vecs
     else:
         num_vecs = sub_vecs.vec_cnt
         if vsa_type is not None and vsa_type != sub_vecs.vsa_type:
             raise ValueError("sub_vecs should be in integer when passing a vsa_type.")
         vsa_type = sub_vecs.vsa_type
-        if sub_vecs.vsa_type == VsaType.Laiho:
+        if vsa.Laiho.is_laiho_type(sub_vecs):
             bits_per_slot = sub_vecs.myvec.bits_per_slot
 
     if vsa_type:
         if vsa_type == VsaType.HRR:
             raise NotImplementedError(f'subvec_mean not implemented for type{VsaType.HRR}.')
-        elif vsa_type == VsaType.Laiho:
+        elif vsa.Laiho.is_laiho_type(vsa_type):
             return snn_mean(num_vecs, bits_per_slot, 1)
         else:
             return bsc_mean(num_vecs)
@@ -139,7 +146,7 @@ def to_vsa_type(sv, vsa_type):
             v[v == 0] = -1
             return VsaBase(v, vsa_type)
 
-    raise ValueError
+    raise ValueError(f"cannot convert from {str(sv.vsa_type)} to {str(vsa_type)}")
 
 
 #def randvec(dims, *args, vsa_type=VsaType.BSC, **kwargs):
