@@ -15,6 +15,16 @@ class Laiho(VsaBase):
         return 'int16'
 
     @classmethod
+    def is_laiho_type(cls, vsa_type):
+        if isinstance(vsa_type, vsapy.BagVec):
+            return isinstance(vsa_type.myvec, Laiho)
+        elif isinstance(vsa_type, Laiho):
+            return True
+        if vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX:
+            return True
+        return False
+
+    @classmethod
     def expandbits(cls, v):
         # Init sparse bound vector (s_bound) with zeros
         s_bound = np.zeros((v.slots, v.bits_per_slot))  # Create a slotted vector with
@@ -35,6 +45,30 @@ class Laiho(VsaBase):
     def packbits(cls, v):
         # Laiho vecs are manipulated in packed format.
         return v
+
+    @classmethod
+    def random_threshold(cls, *args, stdev_count=4.4, **kwargs):
+        """
+        Should return a normalised value of the similarity match that would be expected when comparing
+        random/orthorgonal vectors.
+        :rtype: float
+        """
+        if len(args) > 0:
+            slots = len(args[0])
+            bits_per_slot = args[0].bits_per_slot
+        else:
+            slots = kwargs.get('slots', -1)
+            if slots < 1:
+                raise ValueError("You must supply a sample vector, or set optional parameter 'slots'")
+            bits_per_slot = kwargs.get('bits_per_slot', -1)
+            if bits_per_slot < 1:
+                raise ValueError("You must supply a sample vector, or set optional parameter 'bits_per_slot'")
+
+        p = 1 / bits_per_slot  # Probability of a match between random vectors
+        var_rv = slots * (p * (1 - p))  # Varience (un-normalised)
+        std_rv = math.sqrt(var_rv)  # Stdev (un-normalised)
+        hdrv = slots / bits_per_slot + stdev_count * std_rv  # Un-normalised hsim of two randomvectors adjusted by 'n' stdevs
+        return hdrv / slots
 
     @classmethod
     def randvec(cls, dims, word_size=16,  vsa_type=VsaType.Laiho, bits_per_slot=None):
