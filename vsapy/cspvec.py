@@ -255,7 +255,9 @@ class CSPvec(RawVec):
     def get_current_permutation(self, invec):
         if self.check_for_start_tag_vec(invec):
             return -1
-        match_threshold = self.match_theshold(invec)
+        #match_threshold = self.match_theshold(invec)
+        #match_threshold = VsaBase.random_threshold(invec)
+        match_threshold = vsa.random_threshold(invec)
 
         pindex = 0
         pvec = self.roles.tvec_tag.copy()
