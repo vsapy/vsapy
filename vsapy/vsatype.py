@@ -137,6 +137,16 @@ class VsaBase(np.ndarray):
         return VsaBase(np.packbits(self), self.vsa_type)
 
     @classmethod
+    def random_threshold(cls, *args, **kwargs):
+        """
+        Should return a normalised value of the similarity match that would be expected when comparing
+        random/orthorgonal vectors.
+        :rtype: float
+        """
+        raise NotImplementedError('Subclass must implment "validate_operand()"')
+
+
+    @classmethod
     def randvec(cls, *args, **kwargs):
         """
         :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.
