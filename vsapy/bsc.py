@@ -1,3 +1,4 @@
+import math
 
 from .vsatype import *
 
@@ -19,6 +20,34 @@ class BSC(VsaBase):
     @classmethod
     def packbits(cls, v):
         return np.packbits(v)
+
+    @classmethod
+    def random_threshold(cls, *args, stdev_count=4.4, **kwargs):
+        """
+        Should return a normalised value of the similarity match that would be expected when comparing
+        random/orthorgonal vectors.
+
+        :param args: A sample vector the dimensions of which should be used to calculate threshold.
+        :param stdev_count:
+        :param kwargs: slots=<int>, bits_per_slot=<int>
+        :return: normalised threshold value
+        :rtype: float
+        """
+        if len(args) > 0:
+            if isinstance(args[0], BSC):
+                D = len(args[0])
+            elif isinstance(args[0], int):
+                D = args[0]
+            else:
+                raise ValueError("Expected a BSC vector or an int specifying vector dimension.")
+        else:
+            raise ValueError("You must supply a sample vector, or a value for dimensionality.")
+
+        p = 0.5  # Probability of a match between random vectors
+        var_rv = D * (p * (1 - p))  # Varience (un-normalised)
+        std_rv = math.sqrt(var_rv)  # Stdev (un-normalised)
+        hdrv = D * 0.5 + stdev_count * std_rv  # Un-normalised hsim of two randomvectors adjusted by 'n' stdevs
+        return hdrv / D
 
     @classmethod
     def randvec(cls, dims, word_size=8, vsa_type=VsaType.BSC):
