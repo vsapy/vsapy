@@ -8,7 +8,7 @@ from .sparse_stats import subvec_mean as snn_mean
 
 
 def random_threshold(*args, **kwargs):
-    return VsaBase.random_threshold(*args, **kwargs)
+    return args[0].random_threshold(*args, **kwargs)
 
 
 def subvec_mean_hd(num_vecs):
