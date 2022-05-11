@@ -173,8 +173,8 @@ if "__main__" in __name__:
     bsc_dim = 10000
     bsc_dim_str = f"{int(bsc_dim/1000)}K"
     stdevs = 4.4
-    pretrials = 200
-    trails = 5000
+    pretrials = 50
+    trails = 50
     xvals = [1000]
     vals = [200]
     valsX = [200]
@@ -194,8 +194,12 @@ if "__main__" in __name__:
             end = vals[-1]
             startX = max(valsX[-1]-5, 0)
             endX = valsX[-1]
+        starttime = timeit.default_timer()
         capacity = iter_trails(M, B, pretrials, start, end, stdevs, VsaType.Laiho)
+        laiho_time = timeit.default_timer() - starttime
+        starttime = timeit.default_timer()
         capacityX = iter_trails(M, B, pretrials, startX, endX, stdevs, VsaType.LaihoX)
+        laiho_timeX = timeit.default_timer() - starttime
         if pretrials >= trails:
             vals.append(capacity)
             valsX.append(capacityX)

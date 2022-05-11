@@ -17,15 +17,18 @@ def search_chunks(top_chunk, target_vec):
     all_chunks = []
     top_chunk.flattenchunkheirachy(all_chunks)
 
+    second_best_hs = None
     best_match = None
     max_sim = 0
     for c in all_chunks:
         hs = vsa.hsim(target_vec, c.myvec)
         if hs > max_sim:
+            second_best_hs = max_sim
             max_sim = hs
             best_match = c
 
-    return best_match, max_sim
+    return best_match, max_sim, second_best_hs
+
 
 if __name__ in "__main__":
     vsa_type = VsaType.LaihoX
@@ -50,8 +53,8 @@ if __name__ in "__main__":
     print("\nWhen we create the sequence the first step is exposed.")
     print("We can then step thro the sequence...")
     while True:
-        best_chunk, hs = search_chunks(cat_mat, cat_mat_seq)
-        print(f"{best_chunk.aname}: {hs:0.4f}")
+        best_chunk, hs, nxtbest_hs = search_chunks(cat_mat, cat_mat_seq)
+        print(f"{best_chunk.aname}: {hs:0.4f}, \tnext_best={nxtbest_hs:0.4f}")
         cat_mat_seq, _ = best_chunk.forward_unbind(cat_mat_seq)
         if best_chunk.check_for_stopvec(cat_mat_seq):
             print("StopVec seen...")
@@ -60,8 +63,8 @@ if __name__ in "__main__":
     print("\n\nWe can run the unbind in reverse...")
     cat_mat_seq, _ = best_chunk.reverse_unbind(cat_mat_seq)
     while True:
-        best_chunk, hs = search_chunks(cat_mat, cat_mat_seq)
-        print(f"{best_chunk.aname}: {hs:0.4f}")
+        best_chunk, hs, nxtbest_hs = search_chunks(cat_mat, cat_mat_seq)
+        print(f"{best_chunk.aname}: {hs:0.4f}, \tnext_best={nxtbest_hs:0.4f}")
         cat_mat_seq, _ = best_chunk.reverse_unbind(cat_mat_seq)
         if best_chunk.check_for_start_tag_vec(cat_mat_seq):
             print("Start TagVec seen...")
@@ -71,14 +74,14 @@ if __name__ in "__main__":
     dest_index = 3
     print(f"index position is zero based. Requesting index posn: {dest_index}")
     cat_mat_seq = best_chunk.wind_vec_forward(cat_mat_seq, dest_index)
-    best_chunk, hs = search_chunks(cat_mat, cat_mat_seq)
-    print(f"{best_chunk.aname}: {hs:0.4f}")
+    best_chunk, hs, nxtbest_hs = search_chunks(cat_mat, cat_mat_seq)
+    print(f"{best_chunk.aname}: {hs:0.4f}, \tnext_best={nxtbest_hs:0.4f}")
 
     print("\n\nAnd wind backwards...")
     dest_index = 1
     print(f"index position is zero based. Requesting index posn: {dest_index}")
     cat_mat_seq = best_chunk.wind_vec_forward(cat_mat_seq, dest_index)
-    best_chunk, hs = search_chunks(cat_mat, cat_mat_seq)
-    print(f"{best_chunk.aname}: {hs:0.4f}")
+    best_chunk, hs, nxtbest_hs = search_chunks(cat_mat, cat_mat_seq)
+    print(f"{best_chunk.aname}: {hs:0.4f}, \tnext_best={nxtbest_hs:0.4f}")
 
     quit()

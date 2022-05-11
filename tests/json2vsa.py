@@ -99,20 +99,57 @@ def build_service_vec_from_json(play, vsa_tok,  show_feature_map=True):
     :return: compound  vector containing subfeatures separated as per field_name_role_vectors
     """
     veclist = json2vsa(play, vsa_tok)
-    service_vec = BagVec([t[1] for t in veclist])
+    _, _, service_vec = BagVec.bundle([t[1] for t in veclist], len(veclist))
     if show_feature_map:
         show_featuremap(veclist)
-    return service_vec.myvec
+    return service_vec
+
+
+def read_json_file(fname):
+    infile = open(fname, 'r')
+    jdict = json.load(infile)
+    infile.close()
+    return jdict
 
 
 def build_service_vec_from_file(fname, vsa_tok, show_feature_map=True):
-    infile = open(fname, 'r')
-    play = json.load(infile)
-    infile.close()
+    play = read_json_file(fname)
     return build_service_vec_from_json(play, vsa_tok, show_feature_map)
 
 
+def proc_nested_json(json_input, recurse_func, item_func):
+
+    if isinstance(json_input, dict):
+        dd = []
+        for k, v in list(json_input.items()):
+            rv = recurse_func(v, recurse_func, item_func)
+            if isinstance(rv, list):
+                for item in rv:
+                    item_func(item)
+            else:
+                item_func(v)
+        return dd
+    elif isinstance(json_input, list):
+        dd = []
+        for item in json_input:
+            rv = recurse_func(item, recurse_func, item_func)
+            if isinstance(rv, list):
+                for item in rv:
+                    item_func(item)
+            else:
+                item_func(rv)
+        return dd
+    else:
+        if isinstance(json_input, tuple):
+            return item_func(json_input)
+        else:
+            # Here is where we return the 'VALUE' encoding (rather than the key and sub-key encodings).
+            # chunkSentenceVector() isused for this ATM.
+            # Note, this is where we would put the google news semantic vector encoding, etc
+            return item_func(json_input)
+
 def main():
+
     role_vec_data = create_role_data(data_files=None, vec_len=10000, rand_seed=123)
 
     skip_words = {}
@@ -120,6 +157,34 @@ def main():
                            allow_skip_words=False, skip_words=skip_words,
                            skip_word_criterion=lambda w: False)  # In this case, the lambda is just disabling skip_words
 
+    batt = read_json_file('battalion.json')
+    dd = {}
+    for item in batt:
+        dd[item['name']] = {'sidc': item['sidc'], 'lat': item['lat'], 'lon': item['lon']}
+
+    #build_service_vec_from_json(dd, vsa_tok)
+
+    veclist = json2vsa(dd, vsa_tok)
+    _, vec_cnt, service_vec = BagVec.bundle([t[1] for t in veclist], len(veclist))
+    show_featuremap(veclist)
+    print(f"Feature count = {vec_cnt}")
+
+
+    quit()
+    #
+    # proc_nested_json(batt, proc_nested_json, print)
+    #
+    # quit()
+
+    role_vec_data = create_role_data(data_files=None, vec_len=10000, rand_seed=123)
+
+    skip_words = {}
+    vsa_tok = VsaTokenizer(role_vec_data, _usechunksforwords=False,
+                           allow_skip_words=False, skip_words=skip_words,
+                           skip_word_criterion=lambda w: False)  # In this case, the lambda is just disabling skip_words
+
+    print("\n\n\nBuilding object_detector_1.json")
+    battalion = build_service_vec_from_file('battalion.json', vsa_tok)
     print("\n\n\nBuilding object_detector_1.json")
     objdetect_v1 = build_service_vec_from_file('data/json_samples/object_detector_1.json', vsa_tok)
     print("\nBuilding data/json_samples/object_detector_2.json")
