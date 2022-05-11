@@ -51,11 +51,19 @@ class Laiho(VsaBase):
         """
         Should return a normalised value of the similarity match that would be expected when comparing
         random/orthorgonal vectors.
+
+        :param args: A sample vector the dimensions of which should be used to calculate threshold.
+        :param stdev_count:
+        :param kwargs: slots=<int>, bits_per_slot=<int>
+        :return: normalised threshold value
         :rtype: float
         """
         if len(args) > 0:
-            slots = len(args[0])
-            bits_per_slot = args[0].bits_per_slot
+            if isinstance(args[0], Laiho):
+                slots = len(args[0])
+                bits_per_slot = args[0].bits_per_slot
+            else:
+                raise ValueError("Expected a Laiho/LaihoX vector.")
         else:
             slots = kwargs.get('slots', -1)
             if slots < 1:
