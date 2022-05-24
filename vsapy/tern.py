@@ -25,6 +25,11 @@ class Tern(VsaBase):
         return np.packbits(v)
 
     @classmethod
+    def random_threshold(cls, *args, stdev_count=4.4, **kwargs):
+        from .bsc import BSC
+        return BSC.random_threshold(*args, stdev_count=stdev_count, **kwargs)
+
+    @classmethod
     def randvec(cls, dims, word_size=8, vsa_type=VsaType.Tern):
         """
         :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.

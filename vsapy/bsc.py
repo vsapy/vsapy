@@ -1,6 +1,8 @@
 import math
 
 from .vsatype import *
+from .tern import Tern
+from .ternzero import TernZero
 
 
 class BSC(VsaBase):
@@ -29,12 +31,11 @@ class BSC(VsaBase):
 
         :param args: A sample vector the dimensions of which should be used to calculate threshold.
         :param stdev_count:
-        :param kwargs: slots=<int>, bits_per_slot=<int>
         :return: normalised threshold value
         :rtype: float
         """
         if len(args) > 0:
-            if isinstance(args[0], BSC):
+            if isinstance(args[0], (BSC, Tern, TernZero)):
                 D = len(args[0])
             elif isinstance(args[0], int):
                 D = args[0]
