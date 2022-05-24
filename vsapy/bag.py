@@ -67,7 +67,7 @@ class PackedVec(object):
     @property
     def myvec(self):
         # performance for Laiho/X is slightly improved by not searching the subclass chain
-        if self.vsa_type == VsaType.Laiho or self.vsa_type == VsaType.LaihoX:
+        if self.vsa_type == VsaType.Laiho or self.vsa_type == VsaType.LaihoX or self.vsa_type == VsaType.HRR:
             return self.__myvec
         else:
             return VsaBase.get_subclass(self.vsa_type).unpackbits(self.__myvec)
@@ -75,7 +75,7 @@ class PackedVec(object):
     @myvec.setter
     def myvec(self, v):
         # performance for Laiho/X is slightly improved by not searching the subclass chain
-        if isinstance(v, vsa.Laiho):
+        if isinstance(v, (vsa.Laiho, vsa.HRR)):
             self.__myvec = v
         else:
             self.__myvec = v.packbits(v)

@@ -1,3 +1,4 @@
+import math
 from functools import reduce
 from .vsatype import *
 
@@ -21,6 +22,33 @@ class HRR(VsaBase):
     def packbits(cls, v):
         # HRR vecs are not packed
         return v
+
+    @classmethod
+    def random_threshold(cls, *args, stdev_count=4.4, **kwargs):
+        """
+        Should return a normalised value of the similarity match that would be expected when comparing
+        random/orthorgonal vectors.
+
+        :param args: A sample vector the dimensions of which should be used to calculate threshold.
+        :param stdev_count:
+        :return: threshold value
+        :rtype: float
+        """
+        if len(args) > 0:
+            if isinstance(args[0], HRR):
+                D = len(args[0])
+            elif isinstance(args[0], int):
+                D = args[0]
+            else:
+                raise ValueError("Expected a HRR vector or an int specifying vector dimension.")
+        else:
+            raise ValueError("You must supply a sample vector, or a value for dimensionality.")
+
+        p = 0.0  # For cosine Mean Probability of a match between random vectors = zero
+        var_rv = float(1/D)  # Varience (un-normalised)
+        std_rv = math.sqrt(var_rv)  # Stdev (un-normalised)
+        hdrv = 0.0 + stdev_count * std_rv  # Un-normalised hsim of two randomvectors adjusted by 'n' stdevs
+        return hdrv  # No need to normalise, it already is.
 
     @classmethod
     def randvec(cls, dims, word_size=8, vsa_type=VsaType.HRR):
