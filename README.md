@@ -17,7 +17,9 @@
   - pip install -r requirements.txt
 
 ### Usage
-NOTE: Demos listed below will not run with type `VsaType.HRR`.
+Valid values are, `VsaType.BSC`, `VsaType.Laiho`, `VsaType.LaihoX`(fastest), `VsaType.Tern`, `VsaType.TernZero` and
+`VsaType.HRR`\
+(** Note, the demos listed below will not run with type `VsaType.HRR` **). <br/><br/>
 
 
 - For examples of using the vsapy library see the code examples in the ./tests directory. Note there are no comamd-line
@@ -35,10 +37,13 @@ to build the represntation. <br/><br/>
 vector is a high-level semantic representation of the entire document. Change `vsa_type=VsaType.BSC` in the code to 
 change the type of VSA in use to build the represntation. <br/><br/>
 
-  - `load_docs.py`: demonstrates comparing the document vectors built using `build_docs.py` at various levels in the 
+    - `load_docs.py`: demonstrates comparing the document vectors built using `build_docs.py` at various levels in the 
 document hierarchy. <br/><br/> Change `levels_to_extract = [0, 1]`, `0=top-level document vectors`, `1=Act-level vectors`, 
 `2=Scene-level vectors` and so on (Can set to any level, e.g., `levels_to_extract = [2]` would compare only 
 Scene-level vectors). <br/><br/>
+
+      - Understanding output names: `OE_=Old English`, `NE_=New English`, `nf_=NoFear Shakespeare`, `tk_=NLTK Shakespeare`,
+`og_=Alternate Shakespeare`, `ham=Shakespeare's Hamlet` , `mbeth=Shakespeare's Macbeth`. <br/><br/> 
 
   - `json2vsa.py`: demonstrates creation of a VSA vector from an input JSON file and shows comparison of various JSONs
 using VSA. Change `vsa_type=VsaType.BSC` in the code to change the type of VSA in use to build the represntation.
