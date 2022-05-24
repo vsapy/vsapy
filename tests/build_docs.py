@@ -198,6 +198,8 @@ class VsaTokenizer(object):
                  use_word2vec=False, word2Vec_model=None, my_r2b=None):
 
         """
+        This is a helper class in containing a number of parsers that can encode words, sentences and whole
+        documents into a vsa vector or set of hierarchical vectors.
 
         :param symbol_dict:
         :param _usechunksforwords:
@@ -792,7 +794,7 @@ if __name__ == '__main__':
 
 
     # my_r2b = Real2Binary(300, 10000, seed=951753)
-    vsa_type = VsaType.LaihoX
+    vsa_type = VsaType.BSC
     if vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX:
         role_vecs = create_role_data(vec_len=1000, rand_seed=None, force_new_vecs=True,
                                      vsa_type=vsa_type, bits_per_slot=1024)
