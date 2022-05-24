@@ -607,12 +607,12 @@ def buildacts_from_nltk_xml(fname, vsa_tok, no_acts=10000, no_scenes_per_act=100
                 scene = a['SCENE']
             else:
                 # This is a fixup for bug in coding of shakespear corpus when there is only one scene in an act.
-                scene = [xml.OrderedDict({k:v for k,v in a['SCENE'].items()})]
+                scene = [{k:v for k, v in a['SCENE'].items()}]
 
             for s in scene:
                 # if not isinstance(a['SCENE'], list):
                 #     # This is a fixup for bug in coding of shakespear corpus when there is only one scene in an act.
-                #     s = xml.OrderedDict({k: v for k, v in a['SCENE'].items()})
+                #     s = {k: v for k, v in a['SCENE'].items()}
                 scene_name = s['TITLE']
                 # this_scene = get_scene_number(scene_name)
                 scene_name = scene_name.replace("\n", "").strip()
@@ -625,10 +625,10 @@ def buildacts_from_nltk_xml(fname, vsa_tok, no_acts=10000, no_scenes_per_act=100
                     if isinstance(p['LINE'], list):
                         # print('\t\t', p['SPEAKER'])
                         # lines = " ".join([x for x in p['LINE'] if isinstance(x, unicode) or isinstance(x, str)])
-                        lines = " ".join([x for x in p['LINE'] if not isinstance(x, xml.OrderedDict)])
+                        lines = " ".join([x for x in p['LINE'] if not isinstance(x, dict)])
                         # print('\t\t\t', l)
                     else:
-                        if isinstance(p['LINE'], xml.OrderedDict):
+                        if isinstance(p['LINE'], dict):
                             # lines=lines
                             continue
                         else:
