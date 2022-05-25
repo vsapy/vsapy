@@ -17,8 +17,8 @@
   - pip install -r requirements.txt
 
 ### Usage
-Valid values are, `VsaType.BSC`, `VsaType.Laiho`, `VsaType.LaihoX`(fastest), `VsaType.Tern`, `VsaType.TernZero` and
-`VsaType.HRR`\
+Hint: Valid values for `VSaType` are, `VsaType.BSC`, `VsaType.Laiho`, `VsaType.LaihoX`(fastest), `VsaType.Tern`, 
+`VsaType.TernZero` and `VsaType.HRR`\
 (** Note, the demos listed below will not run with type `VsaType.HRR` **). <br/><br/>
 
 
