@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vsapy"
-version = "0.6.0"
+version = "0.7.0"
 description = "Vector Symbolic Architecture(VSA) library that allows building VSA apps that use various flavours of VSA vectors."
 authors = ["Chris Simpkin"]
 license = "MIT"
