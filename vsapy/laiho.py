@@ -191,7 +191,7 @@ class Laiho(VsaBase):
         :param b: vsa vector
         :return: normalized hamming distance between a and b. 0.0=exact match.
         """
-        raise 1.0 - cls.hsim(a, b)
+        return 1.0 - cls.hsim(a, b)
 
     @classmethod
     def hsim(cls, a, b):
