@@ -8,6 +8,9 @@ from .laiho import *
 class LaihoX(Laiho):
     vsatype = VsaType.LaihoX
 
+    @classmethod
+    def repackbits(cls, v):
+        return VsaBase(np.argmax(v, axis=1), vsa_type=VsaType.LaihoX, bits_per_slot=len(v[0]))
 
     @classmethod
     def sum1(cls, vlist, *args, **kwargs):
