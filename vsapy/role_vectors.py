@@ -66,7 +66,7 @@ def checkt_base_objects_are_synced(data_files, vsa_type=VsaType.BSC):
     must_init_flag = False
     data_objects = {}
     first_file_time_stamp = None
-    for k, fname in data_files.items():
+    for obj_name, fname in data_files.items():
         obj = deserialise_object(fname)
         if obj is None:
             return True, None
@@ -75,7 +75,7 @@ def checkt_base_objects_are_synced(data_files, vsa_type=VsaType.BSC):
             if isinstance(v, VsaBase) and v.vsa_type != vsa_type:
                 return True, None
 
-        data_objects[fname[:fname.find('.bin')]] = obj
+        data_objects[obj_name] = obj
         try:
             if isinstance(obj, dict):
                 this_time_stamp = obj["creation_data_time_stamp"]
@@ -135,7 +135,7 @@ def create_role_data(data_files=None, vec_len=10000, *args,
         role_vecs = RoleVecs(vec_len, random_seed=rand_seed,
                              creation_data_time_stamp=creation_data_time_stamp,
                              vsa_type=vsa_type, **kwargs)
-        serialise_object(role_vecs, "role_vectors.bin")
+        serialise_object(role_vecs, data_files['role_vectors'])
     else:
         role_vecs = data_objects['role_vectors']
 
