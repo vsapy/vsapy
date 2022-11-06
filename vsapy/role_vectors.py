@@ -122,7 +122,7 @@ def create_role_data(data_files=None, vec_len=10000, *args,
     if data_files is None:
         # role vector files should be added to this list
         data_files = {
-            "role_vecs": "role_vectors.bin",
+            "role_vectors": "role_vectors.bin",
         }
 
     must_init_flag = True
