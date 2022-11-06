@@ -256,6 +256,15 @@ class VsaTokenizer(object):
         return CSPvec(word, [self.createWordVector_GB(word)], self.role_vecs)
 
     def createWordVector_GB(self, word):
+        shift = 0
+        letter_vecs = []
+        for c in word:
+            shift += 1
+            letter_vecs.append(np.roll(self.symbol_dict[c], shift))
+
+        return vsapy.BagVec(letter_vecs).myvec
+
+    def createWordVector_GB1(self, word):
         v = self.symbol_dict[word[0]]
         for a in word[1:]:
             v = xorBind(v, self.symbol_dict[a])
