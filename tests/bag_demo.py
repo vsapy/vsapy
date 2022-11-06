@@ -4,8 +4,6 @@ from vsapy.vsatype import VsaType, VsaBase
 from vsapy.bag import BagVec
 
 
-
-
 if "__main__" in __name__:
 
     # create some word vectors
@@ -21,7 +19,7 @@ if "__main__" in __name__:
     abcde_veclist = [symbol_dict[c] for c in list("abcde")]
 
     # 3 Now we sum them to make an un-normalized bag.
-    abcde_sumv = vsa.sum(abcde_veclist, axis=0)
+    abcde_sumv = VsaBase(np.sum(abcde_veclist, axis=0))
     abcde_bag = vsa.normalize(abcde_sumv, len(abcde_veclist))
 
     # 3 Now we can test for the presence of each symbol
