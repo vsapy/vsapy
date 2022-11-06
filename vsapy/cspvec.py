@@ -1,3 +1,5 @@
+import random
+
 import vsapy
 from vsapy.role_vectors import *
 
@@ -120,7 +122,11 @@ class CSPvec(RawVec):
         return cls(name, chunks, role_vecs, chunks)
 
     @classmethod
-    def buildchunks(cls, name, chunklist, role_vecs, split_tail_evenly=True, maxvecs=32, rebuild_names=False):
+    def bag_chunks(cls, name, chunks, rolevecs):
+        return NamedBag(name, chunks)
+
+    @classmethod
+    def buildchunks(cls, name, chunklist, role_vecs, split_tail_evenly=True, maxvecs=90, rebuild_names=False, new_chunker=None):
         """
 
         :param name: Name of this chunk
@@ -135,10 +141,13 @@ class CSPvec(RawVec):
         else:
             level = 0
 
-        if rebuild_names:
-            create_chunk = cls.createchunk_build_name_from_chunks
+        if not new_chunker:
+            if rebuild_names:
+                create_chunk = cls.createchunk_build_name_from_chunks
+            else:
+                create_chunk = cls.createchunk
         else:
-            create_chunk = cls.createchunk
+            create_chunk = new_chunker
 
         # m = 0
         llen = len(chunklist)
