@@ -37,6 +37,10 @@ class Laiho(VsaBase):
         return s_bound
 
     @classmethod
+    def repackbits(cls, v):
+        return VsaBase(np.argmax(v, axis=1), vsa_type=VsaType.Laiho, bits_per_slot=len(v[0]))
+
+    @classmethod
     def unpackbits(cls, v):
         # Laiho vecs are manipulated in packed format.
         return v
@@ -47,7 +51,7 @@ class Laiho(VsaBase):
         return v
 
     @classmethod
-    def random_threshold(cls, *args, stdev_count=4.4, **kwargs):
+    def random_threshold(cls, *args, p=0, stdev_count=4.4, **kwargs):
         """
         Should return a normalised value of the similarity match that would be expected when comparing
         random/orthorgonal vectors.
@@ -72,11 +76,10 @@ class Laiho(VsaBase):
             if bits_per_slot < 1:
                 raise ValueError("You must supply a sample vector, or set optional parameter 'bits_per_slot'")
 
-        p = 1 / bits_per_slot  # Probability of a match between random vectors
-        var_rv = slots * (p * (1 - p))  # Varience (un-normalised)
-        std_rv = math.sqrt(var_rv)  # Stdev (un-normalised)
-        hdrv = slots / bits_per_slot + stdev_count * std_rv  # Un-normalised hsim of two randomvectors adjusted by 'n' stdevs
-        return hdrv / slots
+        if p <= 0:
+            p = 1 / bits_per_slot  # Probability of a match between random vectors
+
+        return p + stdev_count * math.sqrt(p*(1-p)/slots)
 
     @classmethod
     def randvec(cls, dims, word_size=16,  vsa_type=VsaType.Laiho, bits_per_slot=None):
@@ -124,19 +127,14 @@ class Laiho(VsaBase):
 
         return (a - b) % a.bits_per_slot
 
-    # def unbind(self, b):
-    #     """
-    #     Non-Comutative unbinding operator. Decouples a from b and vice-versa. The result
-    #
-    #     :param b:
-    #     :return:
-    #     """
-    #     a = self
-    #     assert a.vsa_type == b.vsa_type, "Mismatch vsa_types"
-    #     assert a.bits_per_slot == b.bits_per_slot, "Bits per slot mismatch"
-    #     assert a.slots == b.slots, "not of slots mismatch"
-    #     return (a - b) % a.bits_per_slot
+    def cyclic_shift(self, shift):
+        Zs = []
+        for i in range(0, self.slots):
+            Zs.append(self[(self.slots - shift + i) % self.slots])
 
+        Zs1 = [self[(self.slots - shift + i) % self.slots] for i in range(self.slots)]
+        Zs2 = np.roll(self, shift)
+        return Zs
 
     @classmethod
     def sum2(cls, vlist, *args, **kwargs):
