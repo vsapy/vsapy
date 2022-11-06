@@ -20,13 +20,16 @@ class VsaBase(np.ndarray):
     class NoAccess(Exception): pass
     class Unknown(Exception): pass
 
-    def __new__(cls, input_array, vsa_type, dtype=None, bits_per_slot=None):
+    def __new__(cls, input_array, *args, dtype=None, **kwargs):
         """
         Create instance of appropriate VsaBase subclass using vsa_type.
         :param input_array:
         :param vsa_type: subclass of VsaBase to be created from VsaType class
+        :param bits_per_slot: number of bits per slot for Laiho and LaihoX types.
         :param dtype: numpy dtype
         """
+        vsa_type = kwargs.get("vsa_type", VsaType.BSC)
+        bits_per_slot = kwargs.get("bits_per_slot", None)
         subclass = cls.get_subclass(vsa_type)
         if subclass:
             # Using "object" base class method avoids recursion here.
