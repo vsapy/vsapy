@@ -4,6 +4,7 @@ import pickle
 import datetime
 from enum import IntEnum
 import numpy as np
+from skimage.util.shape import view_as_windows as viewW
 import vsapy.vsapy as vsa
 from vsapy.vsatype import *
 from vsapy.helpers import serialise_object
@@ -144,6 +145,54 @@ class BagVec(PackedVec):
 
         return rawvec, vec_cnt, norm_vec
 
+
+def strided_indexing_roll(a, r):
+    # Concatenate with sliced to cover all rolls
+    a_ext = np.concatenate((a, a[:, :-1]), axis=1)
+
+    # Get sliding windows; use advanced-indexing to select appropriate ones
+    n = a.shape[1]
+    return viewW(a_ext, (1, n))[np.arange(len(r)), (n-r) % n, 0]
+
+
+class ShiftedBag(BagVec):
+    def __init__(self, veclist, vec_cnt=-1):
+        if isinstance(veclist, list):
+            vsa_type = veclist[0].vsa_type
+            veclist = np.array(veclist)
+
+        rolls = np.arange(1, veclist.shape[0] + 1)
+        vlist1 = VsaBase(strided_indexing_roll(veclist, rolls), vsa_type=vsa_type)
+
+        rawvec, vec_cnt, myvec = BagVec.bundle(vlist1, vec_cnt)
+        super(ShiftedBag, self).__init__(None, vec_cnt, myvec=myvec)
+
+
+class NamedBag(BagVec):
+    def __init__(self, name, veclist, vec_cnt=-1, myvec=None):
+        self.aname = name
+        if isinstance(veclist[0], BagVec):
+            self.chunklist = veclist
+            veclist = [v.myvec for v in veclist]
+        else:
+            self.chunklist = None
+        super(NamedBag, self).__init__(veclist, vec_cnt, myvec=myvec)
+
+    @property
+    def isTerminalNode(self):
+        return self.chunklist is None
+
+    def flattenchunkheirachy(self, allchunks, skip_worker_chunks=False):
+        if self.isTerminalNode:
+            if skip_worker_chunks:
+                return
+            else:
+                allchunks.append(self)
+            return
+        else:
+            allchunks.append(self)
+            for c in self.chunklist:
+                c.flattenchunkheirachy(allchunks, skip_worker_chunks)
 
 class RawVec(BagVec):
     def __init__(self, veclist, vec_cnt=-1):
