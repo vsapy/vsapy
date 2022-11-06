@@ -36,7 +36,7 @@ def keyname2vsa(name, vec_alphabet):
     return v
 
 
-def json2vsa(json_input, vsa_tok):
+def json2vsa(json_input, vsa_tok, value_vectorisor=None):
     """
 
     :param json_input: Nested JSON description of service, fields->unique_role_vectors, values->vectors from words.
@@ -52,6 +52,8 @@ def json2vsa(json_input, vsa_tok):
     """
 
     symbol_dict = vsa_tok.symbol_dict
+    if not value_vectorisor:
+        value_vectorisor = vsa_tok.chunkSentenceVector
     if isinstance(json_input, dict):
         dd = []
         for k, v in list(json_input.items()):
@@ -79,7 +81,7 @@ def json2vsa(json_input, vsa_tok):
             # Here is where we return the 'VALUE' encoding (rather than the key and sub-key encodings).
             # chunkSentenceVector() isused for this ATM.
             # Note, this is where we would put the google news semantic vector encoding, etc
-            return json_input, vsa_tok.chunkSentenceVector(str(json_input)).myvec
+            return json_input, value_vectorisor(str(json_input)).myvec
 
 
 def show_featuremap(veclist_desc):
