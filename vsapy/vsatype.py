@@ -11,6 +11,8 @@ class VsaType(IntEnum):
     Laiho = 5  # Laiho full implementation
     LaihoX = 6  # Laiho simplified - the first nonzero element is taken in bundling operations
 
+    def __str__(self):
+        return self._name_
 
 class VsaBase(np.ndarray):
     vsatype = None
@@ -145,6 +147,10 @@ class VsaBase(np.ndarray):
         """
         raise NotImplementedError('Subclass must implment "random_threshold()"')
 
+
+    @property
+    def vsa_kwargs(self):
+        raise NotImplementedError('Subclass must implment "randvec()"')
 
     @classmethod
     def randvec(cls, *args, **kwargs):
