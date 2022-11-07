@@ -1,6 +1,19 @@
 # vsapy - Vector Symbolic Architecture(VSA) library.
+This library implements the common methods used in hyperdimensional computing/Vector Symbolic Architectures. Namely
+`bind`, `unbind` and some bundling operations, `bag`, `ShiftedBag`, `NamedBag` and a hierarchical bundling 
+method `CSPvec`. The main objective of the library is to enable a single API to cater for various flavours of VSA, 
+including `Binary Spatter Codes`, `Ternary`, `TernaryZero`, `Laiho` and `LaihoX` (a simplified `Laiho` that 
+is faster and supports incremental bundling without catastrophic forgetting). 
 
-## Getting Started
+A set of demo test cases are supplied to demonstrate the use of the library calls.
+
+
+## If installing from PyPi simply
+  - Poetry add vsapy
+or
+  - pip install vsapy (into your environment)
+
+## Installing from source
   - clone the code to a directory of your choice, say "vsapy"
 
 ### Installing Dependancies  
