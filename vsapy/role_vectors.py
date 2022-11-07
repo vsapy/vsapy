@@ -104,7 +104,7 @@ def checkt_base_objects_are_synced(data_files, vsa_type=VsaType.BSC):
     return must_init_flag, data_objects
 
 
-def create_role_data(data_files=None, vec_len=10000, *args,
+def create_role_data(*args, data_files=None, vec_len=10000,
                      rand_seed=None, vsa_type=VsaType.BSC, force_new_vecs=False, **kwargs):
 
     """
