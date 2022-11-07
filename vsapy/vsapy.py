@@ -149,7 +149,6 @@ def to_vsa_type(sv, vsa_type):
     raise ValueError(f"cannot convert from {str(sv.vsa_type)} to {str(vsa_type)}")
 
 
-#def randvec(dims, *args, vsa_type=VsaType.BSC, **kwargs):
 def randvec(dims, *args, **kwargs):
     """
     :param dims: integer or tuple, specifies shape of required array, last element is no bits per vector.

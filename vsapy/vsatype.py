@@ -153,7 +153,10 @@ class VsaBase(np.ndarray):
 
     @property
     def vsa_kwargs(self):
-        raise NotImplementedError('Subclass must implment "randvec()"')
+        if self.vsa_type == VsaType.Laiho or self.vsa_type == VsaType.LaihoX:
+            return {"vsa_type": self.vsa_type, "bits_per_slot": self.bits_per_slot}
+        else:
+            return {"vsa_type": self.vsa_type}
 
     @classmethod
     def randvec(cls, *args, **kwargs):
