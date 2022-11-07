@@ -10,7 +10,7 @@ A set of demo test cases are supplied to demonstrate the use of the library call
 
 ## If installing from PyPi simply
   - Poetry add vsapy
-or
+<br/>or<br/>
   - pip install vsapy (into your environment)
 
 ## Installing from source
