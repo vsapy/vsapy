@@ -43,7 +43,7 @@ e.g., `$python cspvec_sequence.py`.
 
 
   - `cspvec_sequence.py`: This is the most straightforward demo. Try this first. It demonstrates building a sentence as 
-a vsa sequence and stepping forward & backwards. Change `vsa_type=VsaType.BSC` in the code to change the type of VSA  
+a vsa sequence and stepping forward & backwards. Change `vsa_type=VsaType.BSC` in the code to change the type of VSA
 used to build the representation. <br/><br/>
   
   - `build_docs.py`: demonstrates combining large documents into a hierarchical vsa code book. The top-level document 
