@@ -1,4 +1,5 @@
 import re
+from vsapy.bag import *
 from vsapy.cspvec import *
 from vsapy.helpers import *
 

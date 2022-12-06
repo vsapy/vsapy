@@ -7,54 +7,55 @@ import numpy as np
 from skimage.util.shape import view_as_windows as viewW
 import vsapy.vsapy as vsa
 from vsapy.vsatype import *
+from vsapy.role_vectors import TimeStamp
 from vsapy.helpers import serialise_object
 
 
-class TimeStamp(object):
-    @staticmethod
-    def get_creation_data_time_stamp():
-        return 'Timestamp: {:%Y-%m-%d %H:%M:%S.%f}'.format(datetime.datetime.now())
-
-    @staticmethod
-    def compare_time_stamps(t1, t2):
-        t1obj = datetime.datetime.strptime(t1, 'Timestamp: %Y-%m-%d %H:%M:%S.%f')
-        t2obj = datetime.datetime.strptime(t2, 'Timestamp: %Y-%m-%d %H:%M:%S.%f')
-        return t1obj.time() == t2obj.time()
-
-
-def createSymbolVectors(symbols, *args, creation_data_time_stamp=None, **kwargs):
-    if creation_data_time_stamp is None:
-        creation_data_time_stamp = TimeStamp.get_creation_data_time_stamp()
-    # A dictionary is slightly faster than Graham's list look up but only marginally....
-    sym = {"creation_data_time_stamp": creation_data_time_stamp}
-
-    for a in symbols:
-        sym[a] = vsa.randvec(*args, **kwargs)
-
-    return sym
+# class TimeStamp(object):
+#     @staticmethod
+#     def get_creation_data_time_stamp():
+#         return 'Timestamp: {:%Y-%m-%d %H:%M:%S.%f}'.format(datetime.datetime.now())
+#
+#     @staticmethod
+#     def compare_time_stamps(t1, t2):
+#         t1obj = datetime.datetime.strptime(t1, 'Timestamp: %Y-%m-%d %H:%M:%S.%f')
+#         t2obj = datetime.datetime.strptime(t2, 'Timestamp: %Y-%m-%d %H:%M:%S.%f')
+#         return t1obj.time() == t2obj.time()
 
 
-def create_base_vecs(start, end, veclen, ascii_names=True,
-                     creation_data_time_stamp=None, vsa_type=VsaType.BSC, **kwargs):
-
-    if creation_data_time_stamp is None:
-        time_stamp = TimeStamp.get_creation_data_time_stamp()
-    else:
-        time_stamp = creation_data_time_stamp
-
-    base_vecs = {"creation_data_time_stamp": time_stamp}  # Dictionary(Of String, BitArray)
-    if ascii_names:
-        start = ord(start)
-        end = ord(end)
-    for x in range(start, end + 1):  # inclusive of end
-        if ascii_names:
-            c = chr(x)
-        else:
-            c = x
-        base_vecs.update({c: vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)})
-        list(base_vecs.items())
-
-    return base_vecs
+# def createSymbolVectors(symbols, *args, creation_data_time_stamp=None, **kwargs):
+#     if creation_data_time_stamp is None:
+#         creation_data_time_stamp = TimeStamp.get_creation_data_time_stamp()
+#     # A dictionary is slightly faster than Graham's list look up but only marginally....
+#     sym = {"creation_data_time_stamp": creation_data_time_stamp}
+#
+#     for a in symbols:
+#         sym[a] = vsa.randvec(*args, **kwargs)
+#
+#     return sym
+#
+#
+# def create_base_vecs(start, end, veclen, ascii_names=True,
+#                      creation_data_time_stamp=None, vsa_type=VsaType.BSC, **kwargs):
+#
+#     if creation_data_time_stamp is None:
+#         time_stamp = TimeStamp.get_creation_data_time_stamp()
+#     else:
+#         time_stamp = creation_data_time_stamp
+#
+#     base_vecs = {"creation_data_time_stamp": time_stamp}  # Dictionary(Of String, BitArray)
+#     if ascii_names:
+#         start = ord(start)
+#         end = ord(end)
+#     for x in range(start, end + 1):  # inclusive of end
+#         if ascii_names:
+#             c = chr(x)
+#         else:
+#             c = x
+#         base_vecs.update({c: vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)})
+#         list(base_vecs.items())
+#
+#     return base_vecs
 
 
 class PackedVec(object):

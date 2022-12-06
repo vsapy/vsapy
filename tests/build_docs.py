@@ -14,6 +14,7 @@ import random
 import sys
 import xmltodict as xml
 
+from vsapy.bag import *
 from vsapy.logger_utils import *
 
 if sys.version_info[0] >= 3:

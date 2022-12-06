@@ -1,8 +1,9 @@
 import math
+import random
 import vsapy as vsa
 from vsapy import *
 from .vsatype import *
-#from vsapy.bag import BagVec
+from vsapy.role_vectors import TimeStamp
 from .bsc_stats import subvec_mean as bsc_mean
 from .sparse_stats import subvec_mean as snn_mean
 
@@ -46,6 +47,110 @@ def subvec_mean(sub_vecs, vsa_type=None, bits_per_slot=None):
             return bsc_mean(num_vecs)
 
     raise ValueError("vsa_type must be specifed.")
+
+
+class NumberLine(object):
+    def __init__(self, min_number, max_number, vec_dim, vsa_kwargs, bits_per_interval=0, creation_data_time_stamp=None):
+        """
+
+        :param min_number: Min number of the range the number line will represent
+        :param max_number: Max number of the range the number line will represent
+        :param vec_dim: vector dimension
+        :param vsa_kwargs: to pass in VSA type info.
+        :param bits_per_interval: Sets the number of bits perunit interval. =0
+        :param creation_data_time_stamp:
+        """
+        if creation_data_time_stamp is None:
+            self.creation_data_time_stamp = TimeStamp.get_creation_data_time_stamp()
+        else:
+            self.creation_data_time_stamp = creation_data_time_stamp
+
+        self.min_num = min_number
+        self.max_num = max_number
+        self.range = max_number - min_number
+        self.Q = bits_per_interval
+        self.zero_vec = vsa.randvec(vec_dim, **vsa_kwargs)
+        if self.Q:
+            #self.number_vecs = np.array(NumberLine.linear_sequence_gen(self.Q, self.zero_vec))
+            self.number_vecs = VsaBase(NumberLine.linear_sequence_gen(self.Q, self.zero_vec), **vsa_kwargs)
+        else:
+            #self.number_vecs = np.array(NumberLine.linear_sequence_gen(max_number-min_number, self.zero_vec))
+            self.number_vecs = VsaBase(NumberLine.linear_sequence_gen(max_number-min_number, self.zero_vec), **vsa_kwargs)
+        self.make_orthogonal = vsa.randvec(vec_dim, **vsa_kwargs)
+
+    def number_to_vec(self, num):
+        # If number is out of range, report this
+        # The alternative is to quantise
+
+        if num < self.min_num:
+            assert False, "Number is out of range."
+        if num > self.max_num:
+            assert False, "Number is out of range."
+
+        if self.Q:
+            # Normalise the input number to fit within the number line
+            norm_n = int((num - self.min_num) / self.range * self.Q)
+            return vsa.bind(self.number_vecs[norm_n], self.make_orthogonal)
+        else:
+            return vsa.bind(self.number_vecs[num-self.min_num], self.make_orthogonal)
+
+    def number_from_vec(self, number_vec):
+        raw_vec = vsa.bind(self.make_orthogonal, number_vec)
+        r = np.apply_along_axis(np.logical_xor, 1, self.number_vecs, raw_vec)
+        res = np.count_nonzero(r.astype(int), axis=1)
+
+        # Calculate the losses per trail. each trail is a test of random_vec_HD vs myHD
+        winner_indx = np.argmin(res)
+        if self.Q:
+            return int(winner_indx*self.range/self.Q + self.min_num)
+        else:
+            return winner_indx+self.min_num
+
+    @staticmethod
+    def linear_sequence_gen(max_number, start_vec):
+        """
+
+        Parameters
+        ----------
+        max_number : terminal number
+        start_vec : base starting vector
+
+        Returns
+        -------
+        return list of vectors having equal hamming distances between each vector
+        """
+
+        #max_number += 1
+        def gen_next_vec(in_vec, change_map, flipbits):
+            out_vec = in_vec.copy()
+            imap = np.argwhere(change_map == 0).ravel()
+            nobits = len(imap)
+            if nobits == 0:
+                nobits = 1
+                # return out_vec, change_map
+            flip_percent = float(flipbits) / float(nobits)
+            for i in imap:
+                if random.random() < flip_percent:
+                    out_vec[i] = not out_vec[i]
+                    change_map[i] = 1
+
+            return out_vec, change_map
+
+        vec_len = len(start_vec) // 2  # We use half the range because orthogonal vecs have HD=0.5
+        number_line = [start_vec]
+        change_map = np.zeros(len(number_line[0]), dtype=int)
+        if max_number > vec_len:
+            # Here we need to quantise the interval because we can only have vec_len steps
+            assert False, "Not implemented yet"
+            steps = vec_len
+        else:
+            flip = vec_len // max_number
+        print('No bits to flip', flip)
+        for i in range(1, max_number+1):
+            z, change_map = gen_next_vec(number_line[i - 1], change_map, flip)
+            number_line.append(z)
+
+        return number_line
 
 
 class Real2Binary(object):

@@ -2,7 +2,7 @@ import random
 
 import vsapy
 from vsapy.role_vectors import *
-
+from vsapy.bag import *
 from vsapy.logger_utils import *
 log = setuplogs(level='INFO')
 
