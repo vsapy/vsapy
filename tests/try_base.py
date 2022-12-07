@@ -40,7 +40,7 @@ for vt in VsaType:
     v1 = vsa.BagVec([a, b]).myvec
     for vtt in test_types:
         try:
-            t1 = vsa.to_vsa_type(v1, vsa_type=vtt)
+            t1 = vsa.to_vsa_type(v1, new_vsa_type=vtt)
             print("Convert {} to {} = \n\t\t{}\n\t\t{}".format(v1.vsatype.name, t1.vsatype.name, v1[:trunc_view], t1[:trunc_view]))
         except:
             print("\nConvert {} to {}: FAILED".format(str(VsaType(vt)), str(VsaType(vtt))))

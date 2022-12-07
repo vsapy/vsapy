@@ -50,16 +50,22 @@ def subvec_mean(sub_vecs, vsa_type=None, bits_per_slot=None):
 
 
 class NumberLine(object):
-    def __init__(self, min_number, max_number, vec_dim, vsa_kwargs, bits_per_interval=0, creation_data_time_stamp=None):
+    def __init__(self, min_number, max_number, vec_dim, vsa_kwargs, quantise_interval=0, creation_data_time_stamp=None):
         """
+        The NumberLine is only implemented for BSC and Tern/TernZero
 
         :param min_number: Min number of the range the number line will represent
         :param max_number: Max number of the range the number line will represent
         :param vec_dim: vector dimension
         :param vsa_kwargs: to pass in VSA type info.
-        :param bits_per_interval: Sets the number of bits perunit interval. =0
+        :param quantise_interval: sets the number of bits between integer steps.
+                                  Default=0, sets the max bits between steps.
         :param creation_data_time_stamp:
         """
+
+        if vsa_kwargs['vsa_type'] not in [VsaType.BSC, VsaType.Tern, VsaType.TernZero]:
+            raise NotImplementedError(f'NumberLine is not implemented for type: {VsaType.HRR}.')
+
         if creation_data_time_stamp is None:
             self.creation_data_time_stamp = TimeStamp.get_creation_data_time_stamp()
         else:
@@ -68,14 +74,21 @@ class NumberLine(object):
         self.min_num = min_number
         self.max_num = max_number
         self.range = max_number - min_number
-        self.Q = bits_per_interval
+        if quantise_interval > vec_dim // 2:
+            raise ValueError("parameter 'quantise_interval' must be <= vec_dim // 2")
+        self.Q = vec_dim // 2 if quantise_interval == 0 else quantise_interval
         self.zero_vec = vsa.randvec(vec_dim, **vsa_kwargs)
+        zvec = vsa.to_vsa_type(self.zero_vec, new_vsa_type=VsaType.BSC)  # linear_sequence_gen() uses BSC vecs.
         if self.Q:
-            #self.number_vecs = np.array(NumberLine.linear_sequence_gen(self.Q, self.zero_vec))
-            self.number_vecs = VsaBase(NumberLine.linear_sequence_gen(self.Q, self.zero_vec), **vsa_kwargs)
+            self.number_vecs = vsa.to_vsa_type(
+                VsaBase(NumberLine.linear_sequence_gen(self.Q, zvec), vsa_type=VsaType.BSC),
+                new_vsa_type=vsa_kwargs['vsa_type']
+            )
         else:
-            #self.number_vecs = np.array(NumberLine.linear_sequence_gen(max_number-min_number, self.zero_vec))
-            self.number_vecs = VsaBase(NumberLine.linear_sequence_gen(max_number-min_number, self.zero_vec), **vsa_kwargs)
+            self.number_vecs = vsa.to_vsa_type(
+                VsaBase(NumberLine.linear_sequence_gen(max_number-min_number, zvec), **vsa_kwargs),
+                new_vsa_type=vsa_kwargs['vsa_type']
+            )
         self.make_orthogonal = vsa.randvec(vec_dim, **vsa_kwargs)
 
     def number_to_vec(self, num):
@@ -120,7 +133,6 @@ class NumberLine(object):
         return list of vectors having equal hamming distances between each vector
         """
 
-        #max_number += 1
         def gen_next_vec(in_vec, change_map, flipbits):
             out_vec = in_vec.copy()
             imap = np.argwhere(change_map == 0).ravel()
@@ -209,15 +221,15 @@ class Real2Binary(object):
         return ZZ.astype('uint8')
 
 
-def to_vsa_type(sv, vsa_type):
+def to_vsa_type(sv, new_vsa_type):
     """
 
-    :param sv:
-    :param vsa_type: Type we want the vector to become
+    :param sv: 1D or 2D array of vectors
+    :param new_vsa_type: Type we want the vector to become
     :return:
     """
 
-    if sv.vsatype == vsa_type:
+    if sv.vsatype == new_vsa_type:
         return sv
 
     v = sv.copy()  # Get a copy so we do not change the source
@@ -225,33 +237,33 @@ def to_vsa_type(sv, vsa_type):
         # We need to flip any zeros to a random 1 or -1
         v.vsa_type = VsaType.Tern
         v = v.reset_zeros_normalize(v)  # By Normalising as a VsaType.TERNARY we randomly flip 0's to 1 or -1
-        if vsa_type == VsaType.Tern:
-            return VsaBase(v, vsa_type)
-        elif vsa_type == VsaType.BSC:
+        if new_vsa_type == VsaType.Tern:
+            return VsaBase(v, vsa_type=new_vsa_type)
+        elif new_vsa_type == VsaType.BSC:
             v[v == -1] = 0
             v.vsa_type = VsaType.BSC  # set new vsa_type
-            return VsaBase(v, vsa_type)
+            return VsaBase(v, vsa_type=new_vsa_type)
         else:
             raise ValueError
 
     if sv.vsa_type == VsaType.Tern:
-        if vsa_type == VsaType.TernZero:
+        if new_vsa_type == VsaType.TernZero:
             # At VsaTernary does not have any zeros so we can hust flip the type
-            return VsaBase(v, vsa_type)
-        elif vsa_type == VsaType.BSC:
+            return VsaBase(v, new_vsa_type)
+        elif new_vsa_type == VsaType.BSC:
             v[v == -1] = 0
             v = v.astype('uint8')
-            return VsaBase(v, vsa_type)
+            return VsaBase(v, vsa_type=new_vsa_type)
         else:
             raise ValueError
 
     if sv.vsa_type == VsaType.BSC:
-        if vsa_type == VsaType.Tern or vsa_type == VsaType.TernZero:
+        if new_vsa_type == VsaType.Tern or new_vsa_type == VsaType.TernZero:
             v = v.astype('int8')
             v[v == 0] = -1
-            return VsaBase(v, vsa_type)
+            return VsaBase(v, vsa_type=new_vsa_type)
 
-    raise ValueError(f"cannot convert from {str(sv.vsa_type)} to {str(vsa_type)}")
+    raise ValueError(f"cannot convert from {str(sv.vsa_type)} to {str(new_vsa_type)}")
 
 
 def randvec(dims, *args, **kwargs):
