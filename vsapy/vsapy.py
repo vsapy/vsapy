@@ -76,7 +76,7 @@ class NumberLine(object):
         self.range = max_number - min_number
         if quantise_interval > vec_dim // 2:
             raise ValueError("parameter 'quantise_interval' must be <= vec_dim // 2")
-        self.Q = vec_dim // 2 if quantise_interval == 0 else quantise_interval
+        self.Q = min(self.range, vec_dim // 2) if quantise_interval == 0 else quantise_interval
         self.zero_vec = vsa.randvec(vec_dim, **vsa_kwargs)
         zvec = vsa.to_vsa_type(self.zero_vec, new_vsa_type=VsaType.BSC)  # linear_sequence_gen() uses BSC vecs.
         if self.Q:
