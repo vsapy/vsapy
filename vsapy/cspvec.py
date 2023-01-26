@@ -62,9 +62,15 @@ class CSPvec(RawVec):
             if self.chunksize % 2 == 0:
                 # For terminal nodes this stop_vec is actually a random vec but lets us keep an exact count
                 # of the vectors in the compound vec
-                veclist.append(self.stopvec)
+                if isinstance(veclist, np.ndarray):
+                    veclist = VsaBase(np.vstack((veclist, self.stopvec)), vsa_type=veclist[0].vsa_type)
+                else:
+                    veclist.append(self.stopvec)
         else:
-            veclist.append(self.stopvec)
+            if isinstance(veclist, np.ndarray):
+                veclist = VsaBase(np.vstack((veclist, self.stopvec)), vsa_type=veclist[0].vsa_type)
+            else:
+                veclist.append(self.stopvec)
 
         permed_vec_list = self.permveclist(veclist)
         super(CSPvec, self).__init__(permed_vec_list)
