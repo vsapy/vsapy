@@ -1,7 +1,7 @@
 [tool.poetry]
 readme = "README.md"
 name = "vsapy"
-version = "0.8.0"
+version = "0.9.0"
 description = "Vector Symbolic Architecture(VSA) library that allows building VSA apps that use various flavours of VSA vectors."
 authors = ["Chris Simpkin"]
 license = "MIT"

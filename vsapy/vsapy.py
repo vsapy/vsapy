@@ -211,14 +211,12 @@ class Real2Binary(object):
         :param v: real number vector to convert.
         :return: Binary vector representation of v having an i.i.d, approx equal number of 1's and 0's.
         """
-        Exp_V = 0.5 * np.sum(v)
-        Var_V = math.sqrt(0.25 * np.sum(v * v))
-        ZZ = (np.sum(self.mapper * v, axis=1) - Exp_V) / Var_V  # Sum and threshold.
-        # Normalise this to binary
-        ZZ[ZZ >= 0.0] = 1
-        ZZ[ZZ < 0.0] = 0
+        ZZ = np.dot(self.mapper, np.swapaxes(v, 0, 1)).T
+        exp = 0.5 * np.sum(v, axis=1)
+        var = np.sqrt(np.sum(v * v, axis=1) * 0.25)
 
-        return ZZ.astype('uint8')
+        ZZ = ((ZZ.T - exp) / var).T
+        return (ZZ >= 0).astype('uint8')
 
 
 def to_vsa_type(sv, new_vsa_type):
