@@ -3,9 +3,7 @@
 # from anywhere without the need for a central repositor or broadcasting role_vectors around the place :-)
 
 import json
-import numpy as np
 from tests.build_docs import VsaTokenizer
-from vsapy.role_vectors import *
 from vsapy.cspvec import *
 
 
@@ -91,6 +89,29 @@ def show_featuremap(veclist_desc):
     print("\n")
 
 
+def get_roles_(veclist, symbol_dict):
+    """
+
+    :param veclist: tuple (json_key_name_chain: string, chained vector value)
+    :param symbol_dict:
+    :return: dict[string, vector] Maps individual json jey names to role vectors,
+             includes the json field name chain absent of the json value.
+    """
+    myrole_vecs = {}
+    identity_vec = VsaBase(np.zeros_like(symbol_dict['a']), vsa_type=symbol_dict['a'].vsa_type)
+    for k, v in veclist:
+        chained_role = identity_vec
+        role_split = k.split(" * ")
+        for r in role_split[:-1]:
+            if r not in myrole_vecs:
+                myrole_vecs[r] = keyname2vsa(r, symbol_dict)
+            chained_role = vsa.bind(chained_role, myrole_vecs[r])  # build a chain of each role vector
+            
+        myrole_vecs[k[:k.rfind(" * ")]] = chained_role  # We also store the chained roles for easy of calculating.
+
+    return myrole_vecs
+
+
 def build_service_vec_from_json(play, vsa_tok,  show_feature_map=True):
     """
 
@@ -98,13 +119,16 @@ def build_service_vec_from_json(play, vsa_tok,  show_feature_map=True):
     :param show_feature_map: For DEBUG, True to print how feature was built.
            Note: vectors are XOR'd in pairs from right to left.
 
-    :return: compound  vector containing subfeatures separated as per field_name_role_vectors
+    :return: tuple (
+                    compound  vector containing subfeatures separated as per field_name_role_vectors,
+                    veclist tuple (chain_map_string, vector) returned by json2vsa
+                    ) 
     """
     veclist = json2vsa(play, vsa_tok)
     _, _, service_vec = BagVec.bundle([t[1] for t in veclist], len(veclist))
     if show_feature_map:
         show_featuremap(veclist)
-    return service_vec
+    return service_vec, veclist
 
 
 def read_json_file(fname):
@@ -115,6 +139,16 @@ def read_json_file(fname):
 
 
 def build_service_vec_from_file(fname, vsa_tok, show_feature_map=True):
+    """
+    
+    :param fname: 
+    :param vsa_tok: 
+    :param show_feature_map: 
+    :return: tuple (
+                    compound  vector containing subfeatures separated as per field_name_role_vectors,
+                    veclist tuple (chain_map_string, vector) returned by json2vsa
+                    ) 
+    """
     play = read_json_file(fname)
     return build_service_vec_from_json(play, vsa_tok, show_feature_map)
 
@@ -133,21 +167,27 @@ def main():
                            skip_word_criterion=lambda w: False)  # In this case, the lambda is just disabling skip_words
 
     print("\n\n\nBuilding object_detector_1.json")
-    objdetect_v1 = build_service_vec_from_file('data/json_samples/object_detector_1.json', vsa_tok)
+    objdetect_v1, veclist = build_service_vec_from_file('data/json_samples/object_detector_1.json', vsa_tok)
+
+    # Showing how to build each individual json keyname vector
+    myroles = get_roles_(veclist, vsa_tok.symbol_dict)
+    for k, v in myroles.items():
+        print(f"{k}: {v}")
+
     print("\nBuilding data/json_samples/object_detector_2.json")
-    objdetect_v2 = build_service_vec_from_file('data/json_samples/object_detector_2.json', vsa_tok)
+    objdetect_v2, veclist = build_service_vec_from_file('data/json_samples/object_detector_2.json', vsa_tok)
     print("\n")
     print(f"Comparing Objdect_1 vs Objdect_2 = {vsa.hsim(objdetect_v1, objdetect_v2):0.4f}")
 
     # Compare first two camera
     print("\nBuilding data/json_samples/tfl_camera_02151.json")
-    tfl_camera_02151 = build_service_vec_from_file('data/json_samples/tfl_camera_02151.json', vsa_tok)
+    tfl_camera_02151, veclist = build_service_vec_from_file('data/json_samples/tfl_camera_02151.json', vsa_tok)
     print("\nBuilding data/json_samples/tfl_camera_02158.json")
-    tfl_camera_02158 = build_service_vec_from_file('data/json_samples/tfl_camera_02158.json', vsa_tok)
+    tfl_camera_02158, veclist = build_service_vec_from_file('data/json_samples/tfl_camera_02158.json', vsa_tok)
     print("\nBuilding data/json_samples/tfl_camera_07450.json")
-    tfl_camera_07450 = build_service_vec_from_file('data/json_samples/tfl_camera_07450.json', vsa_tok)
+    tfl_camera_07450, veclist = build_service_vec_from_file('data/json_samples/tfl_camera_07450.json', vsa_tok)
     print("\nBuilding data/json_samples/tfl_camera_08858.json")
-    tfl_camera_08858 = build_service_vec_from_file('data/json_samples/tfl_camera_08858.json', vsa_tok)
+    tfl_camera_08858, veclist = build_service_vec_from_file('data/json_samples/tfl_camera_08858.json', vsa_tok)
 
     if vsa_type == VsaType.LaihoX:
         note = " (Note: LaihoX thresholds use Laiho estimator and are not accurate)."
