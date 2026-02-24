@@ -1,7 +1,7 @@
 import re
-from vsapy.bag import *
-from vsapy.cspvec import *
-from vsapy.helpers import *
+
+from . import bind
+from .cspvec import *
 
 
 class VsaTokenizer(object):
@@ -66,7 +66,7 @@ class VsaTokenizer(object):
     def chain_vecs(self, word):
         chain = np.roll(self.symbol_dict[word[0]], 1)
         for shift, c in enumerate(word[1:], 2):
-            chain = vsa.bind(chain, np.roll(self.symbol_dict[c], shift))
+            chain = bind(chain, np.roll(self.symbol_dict[c], shift))
 
         return chain
 
@@ -86,7 +86,7 @@ class VsaTokenizer(object):
             shift += 1
             letter_vecs.append(np.roll(self.symbol_dict[c], shift))
 
-        return vsapy.BagVec(letter_vecs).myvec
+        return BagVec(letter_vecs).myvec
 
     def gb_wordvector_as_chunk(self, word):
         return CSPvec(word, [self.createWordVector_GB(word)], self.role_vecs)
@@ -125,6 +125,7 @@ class VsaTokenizer(object):
 
         except Exception as e:
             e = e
+            raise
 
         return v
 
@@ -149,8 +150,9 @@ class VsaTokenizer(object):
                 if v is not None:
                     self.seen_words[w] = PackedVec(v)  # We only build new word vectors once.
 
-        except [ValueError, IndexError] as e:
+        except (ValueError, IndexError) as e:
             e = e
+            raise
 
         return v
 
@@ -180,13 +182,14 @@ class VsaTokenizer(object):
                 try:
                     db_sentence = CSPvec.buildchunks(sentence, wordvecs, self.role_vecs,
                                                      split_tail_evenly=True, rebuild_names=True)
-                except [ValueError, IndexError] as e:
+                except (ValueError, IndexError) as e:
                     print(e)
                     db_sentence = db_sentence  # For Debug
+                    raise
 
-        except [ValueError, IndexError] as e:
-            print(e)
+        except (ValueError, IndexError) as e:
             e = e  # For Debug
+            raise
 
         return db_sentence
 

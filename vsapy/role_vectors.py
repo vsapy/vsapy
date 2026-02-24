@@ -1,27 +1,14 @@
-import threading
-import datetime
-from enum import IntEnum
+from __future__ import annotations
+
 import numpy as np
-from .vsapy import *
+
+from . import randvec
+from .helpers import deserialise_object, serialise_object
+from .logger_utils import setuplogs
+from .time_stamp import TimeStamp
 from .vsatype import VsaBase, VsaType
-from vsapy.logger_utils import *
-log = setuplogs(level='INFO')
 
-from vsapy.bag import *
-from vsapy.helpers import *
-
-
-class TimeStamp(object):
-    @staticmethod
-    def get_creation_data_time_stamp():
-        return 'Timestamp: {:%Y-%m-%d %H:%M:%S.%f}'.format(datetime.datetime.now())
-
-    @staticmethod
-    def compare_time_stamps(t1, t2):
-        t1obj = datetime.datetime.strptime(t1, 'Timestamp: %Y-%m-%d %H:%M:%S.%f')
-        t2obj = datetime.datetime.strptime(t2, 'Timestamp: %Y-%m-%d %H:%M:%S.%f')
-        return t1obj.time() == t2obj.time()
-
+log = setuplogs(level="INFO")
 
 def createSymbolVectors(symbols, *args, creation_data_time_stamp=None, **kwargs):
     if creation_data_time_stamp is None:
@@ -30,7 +17,7 @@ def createSymbolVectors(symbols, *args, creation_data_time_stamp=None, **kwargs)
     sym = {"creation_data_time_stamp": creation_data_time_stamp}
 
     for a in symbols:
-        sym[a] = vsa.randvec(*args, **kwargs)
+        sym[a] = randvec(*args, **kwargs)
 
     return sym
 
@@ -52,7 +39,7 @@ def create_base_vecs(start, end, veclen, ascii_names=True,
             c = chr(x)
         else:
             c = x
-        base_vecs.update({c: vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)})
+        base_vecs.update({c: randvec(veclen, vsa_type=vsa_type, **kwargs)})
         list(base_vecs.items())
 
     return base_vecs
@@ -84,26 +71,25 @@ class RoleVecs(object):
         self.num_dict = create_base_vecs("0", "9", veclen, True,
                                          creation_data_time_stamp=creation_data_time_stamp, vsa_type=vsa_type, **kwargs)
 
-        self.match_message = vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)  # The random alphanumeric match-tag used in workflow requests
+        self.match_message = randvec(veclen, vsa_type=vsa_type, **kwargs)   # The random alphanumeric match-tag used in workflow requests
+        self.id = randvec(veclen, vsa_type=vsa_type, **kwargs)  # The responder's vector id used in match replies to differentiate between
+                                                                            # responders in a workflow request
+                                                                            # (this is as an alternative to self.role_match_message)
 
-        self.id = vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)  # The responder's vector id used in match replies to differentiate between
-                                            # responders in a workflow request
-                                            # (this is as an alternative to self.role_match_message)
-
-        self.jobid = vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)  # The senders job-id in a workflow request
-        self.matchval = vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)  # The hsim match quality in a reply msg
-        self.vec_count = vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)  # The number of vecs embedded in this vector
-        self.stopvec = vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)  # The chunk stop vector
-        self.permVecs = tuple([vsa.randvec(veclen, vsa_type=vsa_type, **kwargs) for _ in range(150)])
-        self.parent = vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)  # Used in DAG encoding
-        self.child = vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)  # Used in DAG encoding
+        self.jobid = randvec(veclen, vsa_type=vsa_type, **kwargs)  # The senders job-id in a workflow request
+        self.matchval = randvec(veclen, vsa_type=vsa_type, **kwargs)  # The hsim match quality in a reply msg
+        self.vec_count = randvec(veclen, vsa_type=vsa_type, **kwargs)  # The number of vecs embedded in this vector
+        self.stopvec = randvec(veclen, vsa_type=vsa_type, **kwargs)  # The chunk stop vector
+        self.permVecs = tuple([randvec(veclen, vsa_type=vsa_type, **kwargs) for _ in range(150)])
+        self.parent = randvec(veclen, vsa_type=vsa_type, **kwargs)  # Used in DAG encoding
+        self.child = randvec(veclen, vsa_type=vsa_type, **kwargs)  # Used in DAG encoding
         # -------------------------------------------------------------------------
-        self.tvec_tag = vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)  # Tvec POSITION-Role-vector
-        self.current_pindex = vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)
-        self.pindex_numeric_base = vsa.randvec(veclen, vsa_type=vsa_type, **kwargs)  # Used when representing numbers as a cyclic-shifted vec
+        self.tvec_tag = randvec(veclen, vsa_type=vsa_type, **kwargs)  # Tvec POSITION-Role-vector
+        self.current_pindex = randvec(veclen, vsa_type=vsa_type, **kwargs)
+        self.pindex_numeric_base = randvec(veclen, vsa_type=vsa_type, **kwargs)  # Used when representing numbers as a cyclic-shifted vec
 
 
-# From initialisation we want certain values to agree across all instances of these vector modules
+# From initialisation, we want certain values to agree across all instances of these vector modules
 # They are initialised together here in a fixed order.
 # Changing the order will stop remote services participating in this scheme from working because
 # the vector alphabet and perm vectors / role vectors in class NewChunkPvecs will be different

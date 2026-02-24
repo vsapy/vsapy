@@ -1,0 +1,173 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+*.pyo
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Poetry
+poetry.lock
+# (remove above line if you DO want to commit poetry.lock)
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Pip
+pip-log.txt
+pip-delete-this-directory.txt
+
+# =========================
+# Test / coverage
+# =========================
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+
+# =========================
+# Type checkers
+# =========================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# IDEs
+# =========================
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# =========================
+# macOS
+# =========================
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Runtime files
+# =========================
+*.pid
+*.seed
+*.out
+*.err
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+*.env
+
+# =========================
+# Binary files
+# =========================
+*.bin
+*.bak
+*.dat
+*.csv
+*.db
+*.sqlite
+*.sqlite3
+*.pkl
+*.pickle
+*.npy
+*.npz
+
+# =========================
+# Images (if generated assets)
+# =========================
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.tiff
+*.svg
+
+# =========================
+# Archives
+# =========================
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.bz2
+*.7z
+
+# =========================
+# Build systems
+# =========================
+.pybuilder/
+target/
+
+# =========================
+# C / C++
+# =========================
+*.o
+*.obj
+*.a
+*.lib
+
+# =========================
+# Node (if ever used)
+# =========================
+node_modules/
+
+# =========================
+# Misc
+# =========================
+*.swp
+*.swo
+*~

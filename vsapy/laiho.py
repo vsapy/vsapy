@@ -1,6 +1,5 @@
 import math
 from scipy import stats
-import vsapy
 from .vsatype import *
 
 
@@ -16,11 +15,14 @@ class Laiho(VsaBase):
 
     @classmethod
     def is_laiho_type(cls, vsa_type):
-        if isinstance(vsa_type, vsapy.BagVec):
+        # Local import avoids circular dependency: bag.py imports Laiho
+        from .bag import BagVec
+
+        if isinstance(vsa_type, BagVec):
             return isinstance(vsa_type.myvec, Laiho)
         elif isinstance(vsa_type, Laiho):
             return True
-        if vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX:
+        if isinstance(vsa_type, VsaType) and (vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX):
             return True
         return False
 
@@ -157,7 +159,7 @@ class Laiho(VsaBase):
         """
 
         # This method is 2X slower than helpers.py mode() !
-        return VsaBase(stats.mode(vlist)[0][0], vsa_type=VsaType.Laiho, bits_per_slot=vlist[0].bits_per_slot)
+        return VsaBase(stats.mode(vlist)[0], vsa_type=VsaType.Laiho, bits_per_slot=vlist[0].bits_per_slot)
 
     @classmethod
     def sum(cls, vlist, *args, **kwargs):
