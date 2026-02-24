@@ -1,6 +1,7 @@
 import numpy as np
-import vsapy as vsa
-from vsapy.vsatype import VsaType, VsaBase
+
+from vsapy import normalize, randvec, hsim
+from vsapy.vsatype import VsaBase
 from vsapy.bag import BagVec
 
 
@@ -13,18 +14,18 @@ if "__main__" in __name__:
     symbols = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890.;:,_'!?-[]&*"
     symbol_dict = {}
     for a in symbols:
-        symbol_dict[a] = vsa.randvec(10000)
+        symbol_dict[a] = randvec(10000)
 
     # 2 Now we can create a bag of lettters
     abcde_veclist = [symbol_dict[c] for c in list("abcde")]
 
     # 3 Now we sum them to make an un-normalized bag.
     abcde_sumv = VsaBase(np.sum(abcde_veclist, axis=0))
-    abcde_bag = vsa.normalize(abcde_sumv, len(abcde_veclist))
+    abcde_bag = normalize(abcde_sumv, len(abcde_veclist))
 
     # 3 Now we can test for the presence of each symbol
     for c in symbols[1:11]:  # just compare first 10 symbols (skipping space) so we don't get a giant list
-        hs = vsa.hsim(symbol_dict[c], abcde_bag)
+        hs = hsim(symbol_dict[c], abcde_bag)
         print(f"{c}={hs:0.4f} <--{ ' match' if hs > 0.53 else 'no match' }")
 
     print("notice that the matches, {a,b,c,d,e} all have similar hamming similarities.")
@@ -35,7 +36,7 @@ if "__main__" in __name__:
     abcde_bag1 = BagVec(abcde_veclist)
     for c in symbols[1:11]:
         # Note that we want to reference the vsa vector of class BagVec which is self.myvec, i.e. abcde_bag1.myvec
-        hs = vsa.hsim(symbol_dict[c], abcde_bag1.myvec)
+        hs = hsim(symbol_dict[c], abcde_bag1.myvec)
         print(f"{c}={hs:0.4f} <--{ ' match' if hs > 0.53 else 'no match' }")
 
     print("notice that the matches, {a,b,c,d,e} all have similar hamming similarities.")
@@ -47,7 +48,7 @@ if "__main__" in __name__:
     abcde_bag2 = BagVec(abcde_veclist)
     for c in symbols[1:11]:
         # Note that we want to reference the vsa vector of class BagVec which is self.myvec, i.e. abcde_bag1.myvec
-        hs = vsa.hsim(symbol_dict[c], abcde_bag2.myvec)
+        hs = hsim(symbol_dict[c], abcde_bag2.myvec)
         print(f"{c}={hs:0.4f} <--{ ' match' if hs > 0.53 else 'no match' }")
 
     print("notice that the 'a' now has a higher hsim than {b,c,e} and that 'd' is no match.")
@@ -60,7 +61,7 @@ if "__main__" in __name__:
     abcde_bag3 = BagVec(abcde_veclist)
     for c in symbols[1:11]:
         # Note that we want to reference the vsa vector of class BagVec which is self.myvec, i.e. abcde_bag1.myvec
-        hs = vsa.hsim(symbol_dict[c], abcde_bag3.myvec)
+        hs = hsim(symbol_dict[c], abcde_bag3.myvec)
         print(f"{c}={hs:0.4f} <--{ ' match' if hs > 0.53 else 'no match' }")
 
     print("notice that only 'a' matches! Do you know why?")

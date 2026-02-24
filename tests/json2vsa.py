@@ -3,8 +3,16 @@
 # from anywhere without the need for a central repositor or broadcasting role_vectors around the place :-)
 
 import json
-from tests.build_docs import VsaTokenizer
-from vsapy.cspvec import *
+import logging
+
+import numpy as np
+
+
+from vsapy import VsaBase, BagVec, VsaType, VsaTokenizer
+from vsapy.role_vectors import create_role_data
+from vsapy.vsapy import bind, hsim, random_threshold
+from vsapy.logger_utils import log, init_logger
+# from tests.build_docs import VsaTokenizer
 
 
 def keyname2vsa(name, vec_alphabet):
@@ -29,7 +37,7 @@ def keyname2vsa(name, vec_alphabet):
     for c in n[1:]:
         # By using ROLL(shift) for each position we enable unique encoding of words such as 'AA' and 'AAA'
         shift += 1
-        v = vsa.bind(v, np.roll(vec_alphabet[c], shift))
+        v = bind(v, np.roll(vec_alphabet[c], shift))
 
     return v
 
@@ -55,20 +63,20 @@ def json2vsa(json_input, vsa_tok, value_vectorisor=None):
     if isinstance(json_input, dict):
         dd = []
         for k, v in list(json_input.items()):
-            rv = json2vsa(v, vsa_tok)
+            rv = json2vsa(v, vsa_tok, value_vectorisor=value_vectorisor)
             if isinstance(rv, list):
                 dd.extend([("{} * {}".format(k, i[0]),
                             # Concantnate XOR field-names with sub role-filler found in i[1]
-                            vsa.bind(keyname2vsa(k, symbol_dict), i[1])) for i in rv])
+                            bind(keyname2vsa(k, symbol_dict), i[1])) for i in rv])
             else:
-                dd.append(("{} * {}".format(k, rv[0]), vsa.bind(keyname2vsa(k, symbol_dict), rv[1])))
+                dd.append(("{} * {}".format(k, rv[0]), bind(keyname2vsa(k, symbol_dict), rv[1])))
         return dd
     elif isinstance(json_input, list):
         dd = []
         for item in json_input:
-            rv = json2vsa(item, vsa_tok)
+            rv = json2vsa(item, vsa_tok, value_vectorisor=value_vectorisor)
             if isinstance(rv, list):
-                dd.extend([json2vsa(i, vsa_tok) for i in rv])
+                dd.extend([json2vsa(i, vsa_tok, value_vectorisor=value_vectorisor) for i in rv])
             else:
                 dd.append(rv)
         return dd
@@ -105,7 +113,7 @@ def get_roles_(veclist, symbol_dict):
         for r in role_split[:-1]:
             if r not in myrole_vecs:
                 myrole_vecs[r] = keyname2vsa(r, symbol_dict)
-            chained_role = vsa.bind(chained_role, myrole_vecs[r])  # build a chain of each role vector
+            chained_role = bind(chained_role, myrole_vecs[r])  # build a chain of each role vector
             
         myrole_vecs[k[:k.rfind(" * ")]] = chained_role  # We also store the chained roles for easy of calculating.
 
@@ -177,7 +185,7 @@ def main():
     print("\nBuilding data/json_samples/object_detector_2.json")
     objdetect_v2, veclist = build_service_vec_from_file('data/json_samples/object_detector_2.json', vsa_tok)
     print("\n")
-    print(f"Comparing Objdect_1 vs Objdect_2 = {vsa.hsim(objdetect_v1, objdetect_v2):0.4f}")
+    print(f"Comparing Objdect_1 vs Objdect_2 = {hsim(objdetect_v1, objdetect_v2):0.4f}")
 
     # Compare first two camera
     print("\nBuilding data/json_samples/tfl_camera_02151.json")
@@ -193,36 +201,36 @@ def main():
         note = " (Note: LaihoX thresholds use Laiho estimator and are not accurate)."
     else:
         note = ""
-    print(f"\nCompare Stuff that SHOULD match, HD > {vsa.random_threshold(objdetect_v1)}{note}")
-    print(f"\tComparing Objdect_1 vs Objdect_2 = {vsa.hsim(objdetect_v1, objdetect_v2):0.4f}")
-    print(f"\tComparing tfl_camera_02151 vs tfl_camera_02158 = {vsa.hsim(tfl_camera_02151, tfl_camera_02158):0.4f}")
-    print(f"\tComparing tfl_camera_02151 vs tfl_camera_07450 = {vsa.hsim(tfl_camera_02151, tfl_camera_07450):0.4f}")
-    print(f"\tComparing tfl_camera_02151 vs tfl_camera_08858 = {vsa.hsim(tfl_camera_02151, tfl_camera_08858):0.4f}")
+    print(f"\nCompare Stuff that SHOULD match, HD > {random_threshold(objdetect_v1)}{note}")
+    print(f"\tComparing Objdect_1 vs Objdect_2 = {hsim(objdetect_v1, objdetect_v2):0.4f}")
+    print(f"\tComparing tfl_camera_02151 vs tfl_camera_02158 = {hsim(tfl_camera_02151, tfl_camera_02158):0.4f}")
+    print(f"\tComparing tfl_camera_02151 vs tfl_camera_07450 = {hsim(tfl_camera_02151, tfl_camera_07450):0.4f}")
+    print(f"\tComparing tfl_camera_02151 vs tfl_camera_08858 = {hsim(tfl_camera_02151, tfl_camera_08858):0.4f}")
 
-    print(f"\tComparing tfl_camera_02158 vs tfl_camera_07450 = {vsa.hsim(tfl_camera_02158, tfl_camera_07450):0.4f}")
-    print(f"\tComparing tfl_camera_02158 vs tfl_camera_08858 = {vsa.hsim(tfl_camera_02158, tfl_camera_08858):0.4f}")
+    print(f"\tComparing tfl_camera_02158 vs tfl_camera_07450 = {hsim(tfl_camera_02158, tfl_camera_07450):0.4f}")
+    print(f"\tComparing tfl_camera_02158 vs tfl_camera_08858 = {hsim(tfl_camera_02158, tfl_camera_08858):0.4f}")
 
-    print(f"\tComparing tfl_camera_07450 vs tfl_camera_08858 = {vsa.hsim(tfl_camera_07450, tfl_camera_08858):0.4f}")
+    print(f"\tComparing tfl_camera_07450 vs tfl_camera_08858 = {hsim(tfl_camera_07450, tfl_camera_08858):0.4f}")
 
     print("\nCompare WITH Self for best match, HD = 1.00")
-    print(f"\tComparing Objdect_1 with self = {vsa.hsim(objdetect_v1, objdetect_v1):0.4f}")
-    print(f"\tComparing Objdect_2 with self = {vsa.hsim(objdetect_v2, objdetect_v2):0.4f}")
-    print(f"\tComparing tfl_camera_02151 with self = {vsa.hsim(tfl_camera_02151, tfl_camera_02151):0.4f}")
-    print(f"\tComparing tfl_camera_02158 with self = {vsa.hsim(tfl_camera_02158, tfl_camera_02158):0.4f}")
-    print(f"\tComparing tfl_camera_07450 with self = {vsa.hsim(tfl_camera_07450, tfl_camera_07450):0.4f}")
-    print(f"\tComparing tfl_camera_08858 with self = {vsa.hsim(tfl_camera_08858, tfl_camera_08858):0.4f}")
+    print(f"\tComparing Objdect_1 with self = {hsim(objdetect_v1, objdetect_v1):0.4f}")
+    print(f"\tComparing Objdect_2 with self = {hsim(objdetect_v2, objdetect_v2):0.4f}")
+    print(f"\tComparing tfl_camera_02151 with self = {hsim(tfl_camera_02151, tfl_camera_02151):0.4f}")
+    print(f"\tComparing tfl_camera_02158 with self = {hsim(tfl_camera_02158, tfl_camera_02158):0.4f}")
+    print(f"\tComparing tfl_camera_07450 with self = {hsim(tfl_camera_07450, tfl_camera_07450):0.4f}")
+    print(f"\tComparing tfl_camera_08858 with self = {hsim(tfl_camera_08858, tfl_camera_08858):0.4f}")
 
-    print(f"\nCompare Stuff that should NOT match, HD < {vsa.random_threshold(objdetect_v1)}{note}")
-    print(f"\tComparing objdetect_v1 vs tfl_camera_02151 = {vsa.hsim(objdetect_v1, tfl_camera_02151):0.4f}")
-    print(f"\tComparing objdetect_v1 vs tfl_camera_02158 = {vsa.hsim(objdetect_v1, tfl_camera_02158):0.4f}")
-    print(f"\tComparing objdetect_v1 vs tfl_camera_07450 = {vsa.hsim(objdetect_v1, tfl_camera_07450):0.4f}")
-    print(f"\tComparing objdetect_v1 vs tfl_camera_08858 = {vsa.hsim(objdetect_v1, tfl_camera_08858):0.4f}")
+    print(f"\nCompare Stuff that should NOT match, HD < {random_threshold(objdetect_v1)}{note}")
+    print(f"\tComparing objdetect_v1 vs tfl_camera_02151 = {hsim(objdetect_v1, tfl_camera_02151):0.4f}")
+    print(f"\tComparing objdetect_v1 vs tfl_camera_02158 = {hsim(objdetect_v1, tfl_camera_02158):0.4f}")
+    print(f"\tComparing objdetect_v1 vs tfl_camera_07450 = {hsim(objdetect_v1, tfl_camera_07450):0.4f}")
+    print(f"\tComparing objdetect_v1 vs tfl_camera_08858 = {hsim(objdetect_v1, tfl_camera_08858):0.4f}")
 
-    print(f"\tComparing objdetect_v2 vs tfl_camera_02151 = {vsa.hsim(objdetect_v2, tfl_camera_02151):0.4f}")
-    print(f"\tComparing objdetect_v2 vs tfl_camera_02158 = {vsa.hsim(objdetect_v2, tfl_camera_02158):0.4f}")
-    print(f"\tComparing objdetect_v2 vs tfl_camera_07450 = {vsa.hsim(objdetect_v2, tfl_camera_07450):0.4f}")
-    print(f"\tComparing objdetect_v2 vs tfl_camera_08858 = {vsa.hsim(objdetect_v2, tfl_camera_08858):0.4f}")
-
+    print(f"\tComparing objdetect_v2 vs tfl_camera_02151 = {hsim(objdetect_v2, tfl_camera_02151):0.4f}")
+    print(f"\tComparing objdetect_v2 vs tfl_camera_02158 = {hsim(objdetect_v2, tfl_camera_02158):0.4f}")
+    print(f"\tComparing objdetect_v2 vs tfl_camera_07450 = {hsim(objdetect_v2, tfl_camera_07450):0.4f}")
+    print(f"\tComparing objdetect_v2 vs tfl_camera_08858 = {hsim(objdetect_v2, tfl_camera_08858):0.4f}")
 
 if __name__ == "__main__":
+    init_logger(logging.INFO)
     main()

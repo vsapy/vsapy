@@ -9,12 +9,9 @@ Each parser processes words into vector, and the proceeds to perform hierarchica
          see CSPvec.buildchunks()
 
 """
+from numpy import random
 
-import random
-import sys
 import xmltodict as xml
-
-from vsapy.bag import *
 from vsapy.logger_utils import *
 
 if sys.version_info[0] >= 3:
@@ -22,8 +19,10 @@ if sys.version_info[0] >= 3:
 
 sys.path.append('/home/chris/Documents/Graham-GenSim')
 
-import nltk.data
+import nltk
+from nltk.data import load as nltk_load
 from nltk.corpus import stopwords
+
 try:
     stopWords = set(stopwords.words('english'))
 except LookupError as e:
@@ -237,11 +236,14 @@ def buildactdicts(filename):
     scenename = ""
     fullactorscombined = defaultdict(lambda: ([], []))
     tokenizer = None
+
     try:
-        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
-    except LookupError as e:
-        nltk.download('punkt')
-        tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
+        tokenizer = nltk_load("tokenizers/punkt/english.pickle")
+    except LookupError:
+        import nltk
+        nltk.download("punkt")
+        nltk.download("punkt_tab")  # <-- required by newer NLTK
+        tokenizer = nltk.data.load("tokenizers/punkt/english.pickle")
 
     for index, row in df.iterrows():
         #print(f"index {index}, row {row} ")
@@ -571,7 +573,7 @@ if __name__ == '__main__':
         repeat_str = "off"
     print("\n\t\tLooping (to test with different randoms) is", repeat_str)
 
-    # see if we wanna change the run
+    # see if we want to change the run
     inp = raw_input23("\n\nDo you want to change the run setup, Y/N? (default='N'): ")
     if 'y' in inp.lower():
         inp = raw_input23("\n\nChunk to line or word level, L/W? (default='L'): ")
@@ -600,7 +602,7 @@ if __name__ == '__main__':
         #     use_word2vec = 'y' in inp.lower()
 
 
-    CSPvec.use_shaping = False  # Shaping is not implmented in this demo
+    CSPvec.use_shaping = False  # Shaping is not implemented in this demo
     word_format = ''
     word_format += '_CW-T' if usechunksforWords else 'CW-F'
     word_format += '_WV-T' if use_word2vec else '_WV-F'
@@ -628,6 +630,7 @@ if __name__ == '__main__':
 
     # my_r2b = Real2Binary(300, 10000, seed=951753)
     vsa_type = VsaType.Laiho
+    vsa_type = VsaType.BSC
     if vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX:
         role_vecs = create_role_data(vec_len=1000, rand_seed=None, force_new_vecs=True,
                                      vsa_type=vsa_type, bits_per_slot=1024)

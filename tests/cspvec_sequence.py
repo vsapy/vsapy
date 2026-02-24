@@ -1,10 +1,9 @@
-from vsapy.logger_utils import *
-from vsapy.helpers import *
-from build_docs import buildacts_from_json, xorBind
-import vsapy.vsapy as vsa
-from vsapy.cspvec import *
-from vsapy.bag import BagVec
-from build_docs import VsaTokenizer
+from vsapy import hsim
+from vsapy.vsatype import VsaType
+from vsapy.laiho import Laiho
+from vsapy.laihox import LaihoX
+from vsapy.vsa_tokenizer import VsaTokenizer
+from vsapy.role_vectors import create_role_data
 
 
 def search_chunks(top_chunk, target_vec):
@@ -21,7 +20,7 @@ def search_chunks(top_chunk, target_vec):
     best_match = None
     max_sim = 0
     for c in all_chunks:
-        hs = vsa.hsim(target_vec, c.myvec)
+        hs = hsim(target_vec, c.myvec)
         if hs > max_sim:
             second_best_hs = max_sim
             max_sim = hs
@@ -32,7 +31,7 @@ def search_chunks(top_chunk, target_vec):
 
 if __name__ in "__main__":
     vsa_type = VsaType.BSC
-    if vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX:
+    if vsa_type == Laiho or vsa_type == LaihoX:
         role_vecs = create_role_data(vec_len=1000, rand_seed=None, force_new_vecs=True,
                                      vsa_type=vsa_type, bits_per_slot=1024)
     else:

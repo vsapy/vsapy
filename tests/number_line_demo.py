@@ -1,12 +1,17 @@
+import numpy
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from vsapy import hsim
 from vsapy.cspvec import *
 from vsapy.vsa_tokenizer import VsaTokenizer
-from vsapy.vsapy import NumberLine
+from vsapy.number_line import NumberLine
 
 
 def generate_numberline_graph(num_list):
+    """
+    :param num_list: A list of tuples, (xpos, vector)
+    """
     hd_val = []
     hd_dist = []
     hd_calc = []
@@ -14,14 +19,16 @@ def generate_numberline_graph(num_list):
         print()
         res = []
         for j in range(len(num_list)):
-            res.append((vsa.hsim(num_list[i][1], num_list[j][1]), num_list[i][0], num_list[j][0]))
+            res.append((hsim(num_list[i][1], num_list[j][1]), num_list[i][0], num_list[j][0]))
 
         res.sort(key=lambda x: x[0], reverse=True)
         prev_dist = -1
+        # THis loop is measuring the distance from the active base point, e.g. vec0 or vec1 to the rest of the vectprs
         for j in range(len(num_list)):
             hd_calc.append(abs(res[j][1] - res[j][2]))
             hd_val.append(res[j][0])
             hd_dist.append(10000 * (1-res[j][0]))
+            # hd_dist.append(round(10000 * (1-res[j][0]), 4))
             if res[j][1] < prev_dist:
                 print(f"\t{res[j][1]}-{res[j][2]}={res[j][0]:0.4f}")
             else:
@@ -32,11 +39,18 @@ def generate_numberline_graph(num_list):
     df = pd.DataFrame(data)
     print(df)
 
+    x_list = [num_list[i][0] for i in range(len(num_list)-1)]
+    y_list = [hd_dist[i+1] - hd_dist[i] for i in range(len(num_list)-1)]
+
+    plt.scatter(x_list, y_list, s=10, c='blue', marker='+')
+    plt.show()
+    plt.pause(1)
+
     dfplt = df.loc[:, ['Distance between points on a 1-D numberline', 'Hamming Similarirty']]
     dfplt.plot.scatter(x='Distance between points on a 1-D numberline', y='Hamming Similarirty',
                        title=f"Hamming Similarity of numberline vectors", subplots=False, marker='.')
     plt.show()
-
+    plt.pause(1)
 
 if __name__ in "__main__":
     bsc_dims = 10000

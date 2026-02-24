@@ -1,11 +1,9 @@
-import math
-import random
-import vsapy as vsa
-from vsapy import *
-from .vsatype import *
-from vsapy.role_vectors import TimeStamp
+import numpy as np
+
+from .vsatype import VsaBase, VsaType
+from .laiho import Laiho
+from .time_stamp import TimeStamp
 from .bsc_stats import subvec_mean as bsc_mean
-from .sparse_stats import subvec_mean as snn_mean
 
 
 def random_threshold(*args, **kwargs):
@@ -27,21 +25,22 @@ def subvec_mean(sub_vecs, vsa_type=None, bits_per_slot=None):
     :return: expected mean value of any subvector in a bundle of num_vecs=sub_vecs.
     :rtype:
     """
-
-    if not isinstance(sub_vecs, vsa.BagVec):
+    from .bag import BagVec
+    if not isinstance(sub_vecs, BagVec):
         num_vecs = sub_vecs
     else:
         num_vecs = sub_vecs.vec_cnt
         if vsa_type is not None and vsa_type != sub_vecs.vsa_type:
             raise ValueError("sub_vecs should be in integer when passing a vsa_type.")
         vsa_type = sub_vecs.vsa_type
-        if vsa.Laiho.is_laiho_type(sub_vecs):
+        if Laiho.is_laiho_type(sub_vecs):
             bits_per_slot = sub_vecs.myvec.bits_per_slot
 
     if vsa_type:
         if vsa_type == VsaType.HRR:
             raise NotImplementedError(f'subvec_mean not implemented for type{VsaType.HRR}.')
-        elif vsa.Laiho.is_laiho_type(vsa_type):
+        elif Laiho.is_laiho_type(vsa_type):
+            from .sparse_stats import subvec_mean as snn_mean
             return snn_mean(num_vecs, bits_per_slot, 1)
         else:
             return bsc_mean(num_vecs)
@@ -49,123 +48,7 @@ def subvec_mean(sub_vecs, vsa_type=None, bits_per_slot=None):
     raise ValueError("vsa_type must be specifed.")
 
 
-class NumberLine(object):
-    def __init__(self, min_number, max_number, vec_dim, vsa_kwargs, quantise_interval=0, creation_data_time_stamp=None):
-        """
-        The NumberLine is only implemented for BSC and Tern/TernZero
-
-        :param min_number: Min number of the range the number line will represent
-        :param max_number: Max number of the range the number line will represent
-        :param vec_dim: vector dimension
-        :param vsa_kwargs: to pass in VSA type info.
-        :param quantise_interval: sets the number of bits between integer steps.
-                                  Default=0, sets the max bits between steps.
-        :param creation_data_time_stamp:
-        """
-
-        if vsa_kwargs['vsa_type'] not in [VsaType.BSC, VsaType.Tern, VsaType.TernZero]:
-            raise NotImplementedError(f'NumberLine is not implemented for type: {VsaType.HRR}.')
-
-        if creation_data_time_stamp is None:
-            self.creation_data_time_stamp = TimeStamp.get_creation_data_time_stamp()
-        else:
-            self.creation_data_time_stamp = creation_data_time_stamp
-
-        self.min_num = min_number
-        self.max_num = max_number
-        self.range = max_number - min_number
-        if quantise_interval > vec_dim // 2:
-            raise ValueError("parameter 'quantise_interval' must be <= vec_dim // 2")
-        self.Q = min(self.range, vec_dim // 2) if quantise_interval == 0 else quantise_interval
-        self.zero_vec = vsa.randvec(vec_dim, **vsa_kwargs)
-        zvec = vsa.to_vsa_type(self.zero_vec, new_vsa_type=VsaType.BSC)  # linear_sequence_gen() uses BSC vecs.
-        if self.Q:
-            self.number_vecs = vsa.to_vsa_type(
-                VsaBase(NumberLine.linear_sequence_gen(self.Q, zvec), vsa_type=VsaType.BSC),
-                new_vsa_type=vsa_kwargs['vsa_type']
-            )
-        else:
-            self.number_vecs = vsa.to_vsa_type(
-                VsaBase(NumberLine.linear_sequence_gen(max_number-min_number, zvec), **vsa_kwargs),
-                new_vsa_type=vsa_kwargs['vsa_type']
-            )
-        self.make_orthogonal = vsa.randvec(vec_dim, **vsa_kwargs)
-
-    def number_to_vec(self, num):
-        # If number is out of range, report this
-        # The alternative is to quantise
-
-        if num < self.min_num:
-            assert False, "Number is out of range."
-        if num > self.max_num:
-            assert False, "Number is out of range."
-
-        if self.Q:
-            # Normalise the input number to fit within the number line
-            norm_n = int((num - self.min_num) / self.range * self.Q)
-            return vsa.bind(self.number_vecs[norm_n], self.make_orthogonal)
-        else:
-            return vsa.bind(self.number_vecs[num-self.min_num], self.make_orthogonal)
-
-    def number_from_vec(self, number_vec):
-        raw_vec = vsa.bind(self.make_orthogonal, number_vec)
-        r = np.apply_along_axis(np.logical_xor, 1, self.number_vecs, raw_vec)
-        res = np.count_nonzero(r.astype(int), axis=1)
-
-        # Calculate the losses per trail. each trail is a test of random_vec_HD vs myHD
-        winner_indx = np.argmin(res)
-        if self.Q:
-            return int(winner_indx*self.range/self.Q + self.min_num)
-        else:
-            return winner_indx+self.min_num
-
-    @staticmethod
-    def linear_sequence_gen(max_number, start_vec):
-        """
-
-        Parameters
-        ----------
-        max_number : terminal number
-        start_vec : base starting vector
-
-        Returns
-        -------
-        return list of vectors having equal hamming distances between each vector
-        """
-
-        def gen_next_vec(in_vec, change_map, flipbits):
-            out_vec = in_vec.copy()
-            imap = np.argwhere(change_map == 0).ravel()
-            nobits = len(imap)
-            if nobits == 0:
-                nobits = 1
-                # return out_vec, change_map
-            flip_percent = float(flipbits) / float(nobits)
-            for i in imap:
-                if random.random() < flip_percent:
-                    out_vec[i] = not out_vec[i]
-                    change_map[i] = 1
-
-            return out_vec, change_map
-
-        vec_len = len(start_vec) // 2  # We use half the range because orthogonal vecs have HD=0.5
-        number_line = [start_vec]
-        change_map = np.zeros(len(number_line[0]), dtype=int)
-        if max_number > vec_len:
-            # Here we need to quantise the interval because we can only have vec_len steps
-            assert False, "Not implemented yet"
-            steps = vec_len
-        else:
-            flip = vec_len // max_number
-        print('No bits to flip', flip)
-        for i in range(1, max_number+1):
-            z, change_map = gen_next_vec(number_line[i - 1], change_map, flip)
-            number_line.append(z)
-
-        return number_line
-
-
-class Real2Binary(object):
+class Real2BinaryLegacy(object):
     def __init__(self, rdim, bdim, seed):
         """
         Note when converting a 'bank' / database of realnumber vectors the same seed MUST be used
@@ -184,9 +67,9 @@ class Real2Binary(object):
         """
         To create the binary vector multiply the mapper matrix by the real number vector.
         The random bit patterns in self.mapper * v produces a (bdim * rdim) real number matrix
-        We then sum along axis=1 which gives us a 'bdim' realnumber vector.
+        We then sum along axis=1 which gives us a 'bdim' real-number vector.
         This is then thresholded to produce a binary bit pattern that maintains the distances in the vector space.
-        The binary vector produced has an, approximately, equal number of 1's and 0's maininting thus maintaining the
+        The binary vector produced has an approximately, equal number of 1's and 0's maintaining thus maintaining the
         i.i.d random distribution of bits within the vector.
 
         example
@@ -217,6 +100,52 @@ class Real2Binary(object):
 
         ZZ = ((ZZ.T - exp) / var).T
         return (ZZ >= 0).astype('uint8')
+
+
+class Real2Binary:
+    """
+    Random Hyperplane Projection (SimHash / Random Binary Projection).
+
+    Preserves cosine similarity in expectation:
+      P[bit differs] = arccos(cos_sim(x,y)) / pi
+
+    Note when converting a 'bank' / database of real-number vectors the same seed MUST be used
+    in order to ensure that the semantic vector space distances are maintained.
+    Obviously a single run will maintain this since we generate the mapper on initialisation.
+    """
+
+    def __init__(self, rdim: int, bdim: int, seed: int | None = None, *, gaussian: bool = False):
+        self.rdim = int(rdim)
+        self.bdim = int(bdim)
+
+        rng = np.random.default_rng(seed)
+
+        # Hyperplanes: (bdim, rdim)
+        if gaussian:
+            self.W = rng.standard_normal(size=(self.bdim, self.rdim)).astype(np.float32)
+        else:
+            # ±1 is fast and works well (zero-mean)
+            self.W = rng.choice([-1.0, 1.0], size=(self.bdim, self.rdim)).astype(np.float32)
+
+    def to_bin(self, v: np.ndarray) -> np.ndarray:
+        """
+        v: shape (rdim,) or (N, rdim)
+        returns: shape (bdim,) or (N, bdim) of uint8 {0,1}
+        """
+        v = np.asarray(v)
+        if v.ndim == 1:
+            if v.shape[0] != self.rdim:
+                raise ValueError(f"Expected v.shape[0]=={self.rdim}, got {v.shape[0]}")
+            y = self.W @ v  # (bdim,)
+            return (y >= 0).astype(np.uint8)
+
+        if v.ndim == 2:
+            if v.shape[1] != self.rdim:
+                raise ValueError(f"Expected v.shape[1]=={self.rdim}, got {v.shape[1]}")
+            y = v @ self.W.T  # (N, bdim)
+            return (y >= 0).astype(np.uint8)
+
+        raise ValueError("v must be 1D or 2D")
 
 
 def to_vsa_type(sv, new_vsa_type):

@@ -1,8 +1,7 @@
-import math
-from scipy import stats
-import vsapy
-from .vsatype import *
-from .laiho import *
+import numpy as np
+
+from .vsatype import VsaBase, VsaType
+from .laiho import Laiho
 
 
 class LaihoX(Laiho):

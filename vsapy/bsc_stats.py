@@ -2,8 +2,15 @@ import math
 from decimal import Decimal
 import numpy as np
 from scipy import special as scm
-import gmpy2
 from .vsa_stats import *
+
+try:
+    import gmpy2  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
+    gmpy2 = None
+
+def _comb(n: int, k: int):
+    return gmpy2.comb(n, k) if gmpy2 is not None else math.comb(n, k)
 
 
 def get_perror(nobits, target_hd, alternate_hd, num_trials, vocab_size):
@@ -31,7 +38,7 @@ def subvec_mean(num_vecs):
 
     P = 0  # Cumulative permutation sum
     for j in range(num_vecs // 2, num_vecs + 1):
-        P = P + gmpy2.comb(num_vecs, j)
+        P = P + _comb(num_vecs, j)
 
     for _ in range(num_vecs):
         P /= 2
@@ -40,7 +47,7 @@ def subvec_mean(num_vecs):
 
 
 def sum_combis(N, k):
-    combis = gmpy2.mpz(0)
+    combis = gmpy2.mpz(0) if gmpy2 is not None else 0
     for j in range(k, N + 1):
         combis += gmpy2.comb(N, j)
     return float(combis / 2 ** N)

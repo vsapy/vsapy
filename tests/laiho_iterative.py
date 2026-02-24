@@ -1,5 +1,6 @@
-import math
 import time
+import timeit
+
 from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -7,11 +8,7 @@ pd.set_option('display.width', None)
 pd.set_option("display.max_rows", None, "display.max_columns", None)
 
 import vsapy as vsa
-from vsapy.vsatype import VsaType, VsaBase
-from vsapy.bag import *
-import numpy as np
-from scipy import stats
-import timeit
+
 from vsapy.laiho import *
 from vsapy.laihox import *
 
