@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from skimage.util.shape import view_as_windows as viewW
 
-from .vsapy import randvec, normalize
+from .vsapy import normalize
 from .laiho import Laiho
 from .hrr import HRR
 from .vsatype import VsaBase, VsaType
@@ -112,10 +112,17 @@ class ShiftedBag(BagVec):
     def __init__(self, veclist, vec_cnt=-1):
         if isinstance(veclist, list):
             vsa_type = veclist[0].vsa_type
-            veclist = np.array(veclist)
+            numpy_vecs = np.array(veclist)
+        else:
+            numpy_vecs = veclist
 
-        rolls = np.arange(1, veclist.shape[0] + 1)
-        vlist1 = VsaBase(strided_indexing_roll(veclist, rolls), vsa_type=vsa_type)
+        if Laiho.is_laiho_type(veclist[0]):
+            bits_per_slot = veclist[0].bits_per_slot
+        else:
+            bits_per_slot = None
+
+        rolls = np.arange(1, numpy_vecs.shape[0] + 1)
+        vlist1 = VsaBase(strided_indexing_roll(numpy_vecs, rolls), vsa_type=vsa_type, bits_per_slot=bits_per_slot)
 
         rawvec, vec_cnt, myvec = BagVec.bundle(vlist1, vec_cnt)
         super(ShiftedBag, self).__init__(None, vec_cnt, myvec=myvec)

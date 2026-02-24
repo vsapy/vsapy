@@ -22,7 +22,7 @@ class Laiho(VsaBase):
             return isinstance(vsa_type.myvec, Laiho)
         elif isinstance(vsa_type, Laiho):
             return True
-        if vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX:
+        if isinstance(vsa_type, VsaType) and (vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX):
             return True
         return False
 
