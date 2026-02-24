@@ -1,64 +1,232 @@
-# vsapy - Vector Symbolic Architecture(VSA) library.
-This library implements the common methods used in hyperdimensional computing/Vector Symbolic Architectures. Namely
-`bind`, `unbind` and some bundling operations, `bag`, `ShiftedBag`, `NamedBag` and a hierarchical bundling 
-method `CSPvec`. The main objective of the library is to enable a single API to cater for various flavours of VSA, 
-including `Binary Spatter Codes`, `Ternary`, `TernaryZero`, `Laiho` and `LaihoX` (a simplified `Laiho` that 
-is faster and supports incremental bundling without catastrophic forgetting). 
+# vsapy - Vector Symbolic Architecture (VSA) library
+
+⚠️ **Version 0.10+ Update — Breaking Changes**
+
+---
+
+## Python Version Requirement (Breaking Change)
+
+As of this release, **vsapy now requires Python >=3.11 and <3.13**.
+
+```toml
+python = ">=3.11,<3.13"
+```
+
+This restriction allows us to:
+
+- Standardise development across Poetry-managed environments  
+- Leverage modern typing and performance improvements  
+- Remove legacy compatibility layers  
+- Align CI/CD and local development setups  
+
+If you are currently using Python 3.9 or 3.10, you will need to upgrade.
+
+Recommended setup:
+
+```bash
+pyenv install 3.11.x
+pyenv local 3.11.x
+poetry env use 3.11
+poetry install
+```
+
+---
+
+## NumberLine Refactor & Extensions
+
+This release significantly refactors and extends the **NumberLine** implementations.
+
+### Linear NumberLine Improvements
+
+- Cleaner behaviour across extended ranges  
+- Improved quantisation handling  
+- More consistent HD similarity gradients  
+- Clearer diagnostic plotting support  
+- Better geometric interpretation of hyperdimensional distance  
+
+### New Circular Variants
+
+The following circular representations are now included:
+
+- `CircularNumberLineFolded`
+- `CircularNumberLineRotational`
+
+These allow:
+
+- True rotational similarity (distance depends only on angular difference)  
+- Periodic encodings  
+- Geometry-aware embedding behaviour  
+- Exploration of circular manifolds in hyperdimensional space  
+
+These representations are particularly useful for:
+
+- Periodic signals  
+- Angular encodings  
+- Cyclic variables (e.g., time-of-day, phase)  
+- Spatial or geometric modelling  
+- Investigating rotational invariance in VSA  
+
+---
+
+## Additional & Updated Demos
+
+The demo suite has been expanded and cleaned up:
+
+- Improved hierarchical document demos  
+- Expanded JSON bundling examples  
+- NumberLine comparison and diagnostic plots  
+- Clearer exploration of embedding geometry  
+
+---
+
+# Library Overview
+
+This library implements the common methods used in hyperdimensional computing / Vector Symbolic Architectures. Namely:
+
+- `bind`
+- `unbind`
+- Bundling operations:
+  - `bag`
+  - `ShiftedBag`
+  - `NamedBag`
+- Hierarchical bundling method:
+  - `CSPvec`
+
+The main objective of the library is to enable a **single API** to cater for various flavours of VSA, including:
+
+- `Binary Spatter Codes`
+- `Ternary`
+- `TernaryZero`
+- `Laiho`
+- `LaihoX` (a simplified Laiho that is faster and supports incremental bundling without catastrophic forgetting)
+- `HRR`
 
 A set of demo test cases are supplied to demonstrate the use of the library calls.
 
+---
 
-## If installing from PyPi simply
-  - Poetry add vsapy
-<br/>or<br/>
-  - pip install vsapy (into your environment)
+# Installation
 
-## Installing from source
-  - clone the code to a directory of your choice, say "vsapy"
+## Install from PyPI
 
-### Installing Dependancies  
-- Poetry: the easiest way is using poetry
-  - cd vsapy
-  - poetry install
-  - poetry shell  (to activate the environment)
-  
+```bash
+poetry add vsapy
+```
 
-- pip install vsapy
-  - create an environment using your favorite environment manager
-  - e.g. conda create -n vsapy39 python=3.9
-  - conda activate vsapy39
-  - pip install -r requirements.txt
+or
 
-### Usage
-Hint: Valid values for `VSaType` are, `VsaType.BSC`, `VsaType.Laiho`, `VsaType.LaihoX`(fastest), `VsaType.Tern`, 
-`VsaType.TernZero` and `VsaType.HRR`\
-(** Note, the demos listed below will not run with type `VsaType.HRR` **). <br/><br/>
+```bash
+pip install vsapy
+```
 
+---
 
-- For examples of using the vsapy library, see the code examples in the ./tests directory. Note there are no 
-command-line arguments implemented for the tests at the moment. To change the type of VSA in use, edit the code changing
-`vsa_type=VsaType.BSC` as mentioned below. All of the test cases can be run by simply invoking from the command line, 
-e.g., `$python cspvec_sequence.py`.
+# Installing from Source
 
+Clone the repository:
 
+```bash
+git clone <repo-url>
+cd vsapy
+```
 
-  - `cspvec_sequence.py`: This is the most straightforward demo. Try this first. It demonstrates building a sentence as 
-a vsa sequence and stepping forward & backwards. Change `vsa_type=VsaType.BSC` in the code to change the type of VSA
-used to build the representation. <br/><br/>
-  
-  - `build_docs.py`: demonstrates combining large documents into a hierarchical vsa code book. The top-level document 
-vector is a high-level semantic representation of the entire document. Change `vsa_type=VsaType.BSC` in the code to 
-change the type of VSA used to build the representation. <br/><br/>
+## Installing Dependencies (Poetry Recommended)
 
-    - `load_docs.py`: compares the document vectors built using `build_docs.py` at various levels in the 
-document hierarchy. <br/><br/> Change `levels_to_extract = [0, 1]`, `0=top-level document vectors`, `1=Act-level vectors`, 
-`2=Scene-level vectors` and so on (Can set to any level, e.g., `levels_to_extract = [2]` would compare only 
-Scene-level vectors). <br/><br/>
+```bash
+poetry install
+poetry shell
+```
 
-      - Understanding output names: `OE_=Old English`, `NE_=New English`, `nf_=NoFear Shakespeare`, `tk_=NLTK Shakespeare`,
-`og_=Alternate Shakespeare`, `ham=Shakespeare's Hamlet` , `mbeth=Shakespeare's Macbeth`. <br/><br/> 
+## Installing with pip
 
-  - `json2vsa.py`: demonstrates the creation of a VSA vector from an input JSON file and shows a comparison of various
-JSONs using VSA. Change `vsa_type=VsaType.BSC` in the code to change the type of VSA used to build the representation.
+Create and activate a virtual environment:
 
+```bash
+conda create -n vsapy python=3.11
+conda activate vsapy
+pip install -r requirements.txt
+```
 
+---
+
+# Usage
+
+Valid values for `VsaType` are:
+
+- `VsaType.BSC`
+- `VsaType.Laiho`
+- `VsaType.LaihoX` (fastest)
+- `VsaType.Tern`
+- `VsaType.TernZero`
+- `VsaType.HRR`
+
+> **Note:** The demos listed below will not run with `VsaType.HRR`.
+
+For examples of using the vsapy library, see the code examples in the `./tests` directory.
+
+There are currently no command-line arguments implemented for the tests.  
+To change the VSA type, edit the code and modify:
+
+```python
+vsa_type = VsaType.BSC
+```
+
+All test cases can be run directly from the command line, for example:
+
+```bash
+python cspvec_sequence.py
+```
+
+---
+
+# Demo Files
+
+## `cspvec_sequence.py`
+
+The most straightforward demo.  
+Demonstrates building a sentence as a VSA sequence and stepping forward & backwards.
+
+---
+
+## `build_docs.py`
+
+Combines large documents into a hierarchical VSA code book.
+
+The top-level document vector is a high-level semantic representation of the entire document.
+
+---
+
+## `load_docs.py`
+
+Compares document vectors built using `build_docs.py` at various levels in the document hierarchy.
+
+Modify:
+
+```python
+levels_to_extract = [0, 1]
+```
+
+Where:
+
+- `0` = top-level document vectors  
+- `1` = Act-level vectors  
+- `2` = Scene-level vectors  
+- etc.
+
+You may set to any level (e.g., `[2]` to compare Scene-level only).
+
+Understanding output names:
+
+- `OE_` = Old English  
+- `NE_` = New English  
+- `nf_` = NoFear Shakespeare  
+- `tk_` = NLTK Shakespeare  
+- `og_` = Alternate Shakespeare  
+- `ham` = Hamlet  
+- `mbeth` = Macbeth  
+
+---
+
+## `json2vsa.py`
+
+Demonstrates creation of a VSA vector from an input JSON file and comparison of multiple JSON structures using VSA.
