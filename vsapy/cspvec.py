@@ -71,6 +71,7 @@ class CSPvec(RawVec):
                 else:
                     veclist.append(self.stopvec)
         else:
+            # Not a terminal node, add the stop vec into the list
             if isinstance(veclist, np.ndarray):
                 veclist = VsaBase(np.vstack((veclist, self.stopvec)), vsa_type=veclist[0].vsa_type)
             else:

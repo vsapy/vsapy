@@ -38,7 +38,7 @@ if __name__ == "__main__":
     bagv = BagVec(vlist[:30])
     print(f"hs_bag0 = {hsim(bagv.myvec, vlist[0]):0.4f}")
     print(f"hs_bag1 = {hsim(bagv.myvec, vlist[1]):0.4f}")
-    print(f"hs_bag_random = {hsim(bagv.myvec, randvec((1,1000), vsa_type=vsa_type, bits_per_slot=bits_per_slot)):0.4f}")
+    print(f"hs_bag_random = {hsim(bagv.myvec, randvec(1000, vsa_type=vsa_type, bits_per_slot=bits_per_slot)):0.4f}")
 
 
     print("\nTest bind/unbind, bind/unbind is lossless.")

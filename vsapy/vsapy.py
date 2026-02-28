@@ -265,29 +265,39 @@ def cosine_sim(a, b):
 
 
 def _is_bank(x) -> bool:
-    """Return True if x should be treated as a bank (collection) of vectors.
-
-    Supported banks:
-      - 2D numpy/VsaBase array shaped (N, D)
-      - list/tuple of 1D vectors
     """
-    try:
-        # VsaBase is an ndarray subclass; treat 2D as a bank.
-        if isinstance(x, np.ndarray) and getattr(x, "ndim", 0) == 2:
-            return True
-    except Exception:
-        pass
-    return isinstance(x, (list, tuple))
+    True if x is a collection (bank) of vectors.
+    """
+
+    if isinstance(x, (list, tuple)):
+        return True
+
+    if not isinstance(x, np.ndarray):
+        return False
+
+    # If not a VSA vector subclass, treat generic 2D as bank
+    if not isinstance(x, VsaBase):
+        return x.ndim == 2
+
+    # VSA vector type checks
+    if Laiho.is_laiho_type(getattr(x, "vsa_type", None)):
+        # Laiho single vector is 2D (slots, bits)
+        # Bank is 3D (N, slots, bits)
+        return x.ndim == 3
+
+    else:
+        # Flat vectors: single is 1D, bank is 2D
+        return x.ndim == 2
 
 
 def _bank_len(x) -> int:
-    if isinstance(x, np.ndarray) and getattr(x, "ndim", 0) == 2:
+    if isinstance(x, np.ndarray) and getattr(x, "ndim", 0) >= 2:
         return int(x.shape[0])
     return len(x)
 
 
 def _bank_get(x, i):
-    if isinstance(x, np.ndarray) and getattr(x, "ndim", 0) == 2:
+    if isinstance(x, np.ndarray) and getattr(x, "ndim", 0) >= 2:
         return x[i]
     return x[i]
 
@@ -351,43 +361,246 @@ def _fast_hsim_hdist(op_name: str, a_arr: np.ndarray, b_arr: np.ndarray):
 
 
 def _fast_cosine(op_name: str, a_arr: np.ndarray, b_arr: np.ndarray):
-    """Vectorized cosine distance/similarity."""
+    """Vectorized cosine distance/similarity with VSA fast-paths.
+
+    Fast paths:
+      - bipolar {-1,+1}:  cos_sim = dot / D
+      - BSC {0,1} / bool: cos_sim = dot / sqrt(k_a * k_b) where k = sum(x)
+      - ternary {-1,0,+1}: cos_sim = dot / sqrt(nnz_a * nnz_b) where nnz = count_nonzero(x)
+    """
     if not (isinstance(a_arr, np.ndarray) and isinstance(b_arr, np.ndarray)):
         return None
     if not (np.issubdtype(a_arr.dtype, np.number) and np.issubdtype(b_arr.dtype, np.number)):
         return None
 
-    def _norm_rows(X):
-        return np.linalg.norm(X, axis=1) + _EPS
+    want_dist = (op_name == "cosine")
 
-    # vec vs bank
+    # ---------- helpers ----------
+    def _as2d(X: np.ndarray) -> np.ndarray:
+        return X[None, :] if X.ndim == 1 else X
+
+    def _sample_ok(X: np.ndarray, allowed: tuple[int, ...], sample_n: int = 4096) -> bool:
+        """Cheap-ish check: verify a sample of values is within allowed set."""
+        # Use a view of first row if 2D to avoid scanning everything.
+        if X.size == 0:
+            return False
+        flat = X.ravel()
+        if flat.size > sample_n:
+            flat = flat[:sample_n]
+        return np.isin(flat, allowed).all()
+
+    def _is_bsc(X: np.ndarray) -> bool:
+        if X.dtype == np.bool_:
+            return True
+        if X.dtype.kind in "iu":  # int/uint
+            # quick bounds
+            mn = int(np.min(X))
+            mx = int(np.max(X))
+            if mn < 0 or mx > 1:
+                return False
+            return _sample_ok(X, (0, 1))
+        return False
+
+    def _is_bipolar(X: np.ndarray) -> bool:
+        if X.dtype.kind in "iu":
+            mn = int(np.min(X))
+            mx = int(np.max(X))
+            if mn < -1 or mx > 1:
+                return False
+            # must be subset of {-1,+1}
+            return _sample_ok(X, (-1, 1))
+        return False
+
+    def _is_ternary_zeros(X: np.ndarray) -> bool:
+        if X.dtype.kind in "iu":
+            mn = int(np.min(X))
+            mx = int(np.max(X))
+            if mn < -1 or mx > 1:
+                return False
+            # subset of {-1,0,+1}
+            return _sample_ok(X, (-1, 0, 1))
+        return False
+
+    def _clip01(cos_sim: np.ndarray) -> np.ndarray:
+        # keep numerics sane; helps when returning distance
+        return np.clip(cos_sim, -1.0, 1.0)
+
+    # Align dims and handle the four shape cases
+    # ---------- CASE 0: vec vs vec ----------
+    if a_arr.ndim == 1 and b_arr.ndim == 1:
+        D = min(a_arr.shape[0], b_arr.shape[0])
+        a = a_arr[:D]
+        b = b_arr[:D]
+
+        if _is_bipolar(a) and _is_bipolar(b):
+            dot = int(np.dot(a.astype(np.int16, copy=False), b.astype(np.int16, copy=False)))
+            cos_sim = float(dot) / float(D)
+            cos_sim = float(np.clip(cos_sim, -1.0, 1.0))
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        if _is_bsc(a) and _is_bsc(b):
+            a_u = a.astype(np.uint8, copy=False)
+            b_u = b.astype(np.uint8, copy=False)
+            dot = int(np.dot(a_u, b_u))  # intersection count
+            ka = int(a_u.sum(dtype=np.int64))
+            kb = int(b_u.sum(dtype=np.int64))
+            denom = float(np.sqrt(float(ka) * float(kb) + _EPS))
+            cos_sim = float(dot) / denom if denom > 0.0 else 0.0
+            cos_sim = float(np.clip(cos_sim, -1.0, 1.0))
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        if _is_ternary_zeros(a) and _is_ternary_zeros(b):
+            a_i = a.astype(np.int16, copy=False)
+            b_i = b.astype(np.int16, copy=False)
+            dot = int(np.dot(a_i, b_i))
+            na = int(np.count_nonzero(a_i))
+            nb = int(np.count_nonzero(b_i))
+            denom = float(np.sqrt(float(na) * float(nb) + _EPS))
+            cos_sim = float(dot) / denom if denom > 0.0 else 0.0
+            cos_sim = float(np.clip(cos_sim, -1.0, 1.0))
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        # fallback float
+        a_f = a.astype(np.float32, copy=False)
+        b_f = b.astype(np.float32, copy=False)
+        dot = float(np.dot(a_f, b_f))
+        denom = float(np.linalg.norm(a_f)) * float(np.linalg.norm(b_f)) + _EPS
+        cos_sim = dot / denom
+        cos_sim = float(np.clip(cos_sim, -1.0, 1.0))
+        return (1.0 - cos_sim) if want_dist else cos_sim
+
+    # ---------- CASE 1: vec vs bank ----------
     if a_arr.ndim == 1 and b_arr.ndim == 2:
         D = min(a_arr.shape[0], b_arr.shape[1])
-        v = a_arr[:D].astype(np.float32, copy=False)
-        B = b_arr[:, :D].astype(np.float32, copy=False)
-        dots = B @ v
-        denom = _norm_rows(B) * (np.linalg.norm(v) + _EPS)
-        cos_sim = dots / denom
-        return (1.0 - cos_sim) if op_name == "cosine" else cos_sim
+        v = a_arr[:D]
+        B = b_arr[:, :D]
 
+        # VSA fast paths
+        if _is_bipolar(v) and _is_bipolar(B):
+            # dot in int64 to be safe
+            dots = (B.astype(np.int16, copy=False) @ v.astype(np.int16, copy=False)).astype(np.int64, copy=False)
+            cos_sim = dots.astype(np.float64) / float(D)
+            cos_sim = _clip01(cos_sim)
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        if _is_bsc(v) and _is_bsc(B):
+            # dots = intersection counts
+            # cast to uint8/bool then matmul to get counts; accumulate in int64
+            v_u = v.astype(np.uint8, copy=False)
+            B_u = B.astype(np.uint8, copy=False)
+            dots = (B_u @ v_u).astype(np.int64, copy=False)
+            kv = int(v_u.sum(dtype=np.int64))
+            kB = B_u.sum(axis=1, dtype=np.int64)
+            denom = np.sqrt(kB.astype(np.float64) * float(kv) + _EPS)
+            cos_sim = dots.astype(np.float64) / denom
+            cos_sim = _clip01(cos_sim)
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        if _is_ternary_zeros(v) and _is_ternary_zeros(B):
+            v_i = v.astype(np.int16, copy=False)
+            B_i = B.astype(np.int16, copy=False)
+            dots = (B_i @ v_i).astype(np.int64, copy=False)
+            nnz_v = int(np.count_nonzero(v_i))
+            nnz_B = np.count_nonzero(B_i, axis=1).astype(np.int64, copy=False)
+            denom = np.sqrt(nnz_B.astype(np.float64) * float(nnz_v) + _EPS)
+            cos_sim = dots.astype(np.float64) / denom
+            cos_sim = _clip01(cos_sim)
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        # fallback float path
+        v = v.astype(np.float32, copy=False)
+        B = B.astype(np.float32, copy=False)
+        dots = B @ v
+        denom = (np.linalg.norm(B, axis=1).astype(np.float64) + _EPS) * (float(np.linalg.norm(v)) + _EPS)
+        cos_sim = dots.astype(np.float64) / denom
+        cos_sim = _clip01(cos_sim)
+        return (1.0 - cos_sim) if want_dist else cos_sim
+
+    # ---------- CASE 2: bank vs vec ----------
     if a_arr.ndim == 2 and b_arr.ndim == 1:
         D = min(a_arr.shape[1], b_arr.shape[0])
-        A = a_arr[:, :D].astype(np.float32, copy=False)
-        v = b_arr[:D].astype(np.float32, copy=False)
-        dots = A @ v
-        denom = _norm_rows(A) * (np.linalg.norm(v) + _EPS)
-        cos_sim = dots / denom
-        return (1.0 - cos_sim) if op_name == "cosine" else cos_sim
+        A = a_arr[:, :D]
+        v = b_arr[:D]
 
-    # bank vs bank
+        if _is_bipolar(A) and _is_bipolar(v):
+            dots = (A.astype(np.int16, copy=False) @ v.astype(np.int16, copy=False)).astype(np.int64, copy=False)
+            cos_sim = dots.astype(np.float64) / float(D)
+            cos_sim = _clip01(cos_sim)
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        if _is_bsc(A) and _is_bsc(v):
+            A_u = A.astype(np.uint8, copy=False)
+            v_u = v.astype(np.uint8, copy=False)
+            dots = (A_u @ v_u).astype(np.int64, copy=False)
+            kA = A_u.sum(axis=1, dtype=np.int64)
+            kv = int(v_u.sum(dtype=np.int64))
+            denom = np.sqrt(kA.astype(np.float64) * float(kv) + _EPS)
+            cos_sim = dots.astype(np.float64) / denom
+            cos_sim = _clip01(cos_sim)
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        if _is_ternary_zeros(A) and _is_ternary_zeros(v):
+            A_i = A.astype(np.int16, copy=False)
+            v_i = v.astype(np.int16, copy=False)
+            dots = (A_i @ v_i).astype(np.int64, copy=False)
+            nnz_A = np.count_nonzero(A_i, axis=1).astype(np.int64, copy=False)
+            nnz_v = int(np.count_nonzero(v_i))
+            denom = np.sqrt(nnz_A.astype(np.float64) * float(nnz_v) + _EPS)
+            cos_sim = dots.astype(np.float64) / denom
+            cos_sim = _clip01(cos_sim)
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        # fallback float path
+        A = A.astype(np.float32, copy=False)
+        v = v.astype(np.float32, copy=False)
+        dots = A @ v
+        denom = (np.linalg.norm(A, axis=1).astype(np.float64) + _EPS) * (float(np.linalg.norm(v)) + _EPS)
+        cos_sim = dots.astype(np.float64) / denom
+        cos_sim = _clip01(cos_sim)
+        return (1.0 - cos_sim) if want_dist else cos_sim
+
+    # ---------- CASE 3: bank vs bank ----------
     if a_arr.ndim == 2 and b_arr.ndim == 2:
         D = min(a_arr.shape[1], b_arr.shape[1])
-        A = a_arr[:, :D].astype(np.float32, copy=False)
-        B = b_arr[:, :D].astype(np.float32, copy=False)
+        A = a_arr[:, :D]
+        B = b_arr[:, :D]
+
+        if _is_bipolar(A) and _is_bipolar(B):
+            dots = (A.astype(np.int16, copy=False) @ B.astype(np.int16, copy=False).T).astype(np.int64, copy=False)
+            cos_sim = dots.astype(np.float64) / float(D)
+            cos_sim = _clip01(cos_sim)
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        if _is_bsc(A) and _is_bsc(B):
+            A_u = A.astype(np.uint8, copy=False)
+            B_u = B.astype(np.uint8, copy=False)
+            dots = (A_u @ B_u.T).astype(np.int64, copy=False)
+            kA = A_u.sum(axis=1, dtype=np.int64)  # (NA,)
+            kB = B_u.sum(axis=1, dtype=np.int64)  # (NB,)
+            denom = np.sqrt(kA.astype(np.float64)[:, None] * kB.astype(np.float64)[None, :] + _EPS)
+            cos_sim = dots.astype(np.float64) / denom
+            cos_sim = _clip01(cos_sim)
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        if _is_ternary_zeros(A) and _is_ternary_zeros(B):
+            A_i = A.astype(np.int16, copy=False)
+            B_i = B.astype(np.int16, copy=False)
+            dots = (A_i @ B_i.T).astype(np.int64, copy=False)
+            nnz_A = np.count_nonzero(A_i, axis=1).astype(np.int64, copy=False)
+            nnz_B = np.count_nonzero(B_i, axis=1).astype(np.int64, copy=False)
+            denom = np.sqrt(nnz_A.astype(np.float64)[:, None] * nnz_B.astype(np.float64)[None, :] + _EPS)
+            cos_sim = dots.astype(np.float64) / denom
+            cos_sim = _clip01(cos_sim)
+            return (1.0 - cos_sim) if want_dist else cos_sim
+
+        # fallback float path
+        A = A.astype(np.float32, copy=False)
+        B = B.astype(np.float32, copy=False)
         dots = A @ B.T
-        denom = _norm_rows(A)[:, None] * _norm_rows(B)[None, :]
-        cos_sim = dots / denom
-        return (1.0 - cos_sim) if op_name == "cosine" else cos_sim
+        denom = (np.linalg.norm(A, axis=1).astype(np.float64) + _EPS)[:, None] * (np.linalg.norm(B, axis=1).astype(np.float64) + _EPS)[None, :]
+        cos_sim = dots.astype(np.float64) / denom
+        cos_sim = _clip01(cos_sim)
+        return (1.0 - cos_sim) if want_dist else cos_sim
 
     return None
 

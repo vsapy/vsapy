@@ -224,6 +224,8 @@ class VsaBase(np.ndarray):
     @classmethod
     def cosine(cls, a, b):
         """
+        cosine distance, 0.0=exact match.
+
         :param a: vsa vector
         :param b: vsa vector
         :return: cosine distance between a and b, 0.0=exact match.
@@ -232,7 +234,23 @@ class VsaBase(np.ndarray):
             assert b.vsa_type == VsaType.Tern or b.vsa_type == VsaType.TernZero, "Mismatch vsa_types"
         else:
             assert a.vsa_type == b.vsa_type, "Mismatch vsa_types"
-        return sp.distance.cosine(a, b)
+
+        # avoid circular import
+        from .vsapy import _fast_cosine
+
+        aa = np.asarray(a)
+        bb = np.asarray(b)
+
+        fast = _fast_cosine("cosine", aa, bb)
+        if fast is not None:
+            # fast is a scalar (vec-vs-vec) or array (bank cases)
+            return float(fast) if np.ndim(fast) == 0 else fast
+
+        # --- Fallback: force float64 so SciPy can't overflow int products ---
+        return sp.distance.cosine(
+            np.asarray(aa, dtype=np.float64),
+            np.asarray(bb, dtype=np.float64),
+        )
 
     @classmethod
     def cosine_sim(cls, a, b):
