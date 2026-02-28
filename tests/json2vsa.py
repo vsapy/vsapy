@@ -162,7 +162,7 @@ def build_service_vec_from_file(fname, vsa_tok, show_feature_map=True):
 
 
 def main():
-    vsa_type = VsaType.Tern
+    vsa_type = VsaType.BSC
     if vsa_type == VsaType.Laiho or vsa_type == VsaType.LaihoX:
         role_vecs = create_role_data(vec_len=1000, rand_seed=None, force_new_vecs=True,
                                      vsa_type=vsa_type, bits_per_slot=1024)

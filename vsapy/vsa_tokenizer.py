@@ -80,50 +80,8 @@ class VsaTokenizer(object):
 
         return cnk
 
-    # def createWordVector_GB(self, word):
-    #     shift = 0
-    #     letter_vecs = []
-    #     for c in word:
-    #         shift += 1
-    #         letter_vecs.append(np.roll(self.symbol_dict[c], shift))
-    #
-    #     return BagVec(letter_vecs).myvec
-
-    # def createWordVector_GB(self, word: str, key: Optional[VsaBase] = None) -> VsaBase:
-    #     """
-    #     Backwards-compatible string encoder.
-    #
-    #     Old behaviour (key is None):
-    #         bundle( roll(sym[c1],1), roll(sym[c2],2), ... )
-    #
-    #     New "late binding / late bundling" (key provided):
-    #         bundle( key * roll(sym[c1],1),
-    #                key * roll(sym[c2],2),
-    #                ... )
-    #
-    #     This makes the value encoding key-specific at the character level.
-    #     """
-    #     shift = 0
-    #     letter_vecs = []
-    #
-    #     for c in word:
-    #         shift += 1
-    #         lv = np.roll(self.symbol_dict[c], shift)
-    #
-    #         if key is not None:
-    #             lv = bind(key, lv)
-    #
-    #         letter_vecs.append(lv)
-    #
-    #     return BagVec(letter_vecs).myvec
-
     def createWordVector_GB(self, word: str, key: Optional[VsaBase] = None) -> VsaBase:
         """
-        Backwards-compatible string encoder.
-
-        Old behaviour (key is None):
-            bundle( roll(sym[c1],1), roll(sym[c2],2), ... )
-
         Late-bind / late-bundle (key provided):
             bundle( key * roll(sym[c1],1),
                    key * roll(sym[c2],2),
