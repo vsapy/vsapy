@@ -5,6 +5,7 @@ import numpy as np
 
 from .time_stamp import TimeStamp
 from . import vsapy as vsa
+from .vsapy import to_vsa_type
 from .vsatype import VsaBase, VsaType
 
 # ----------------------------
@@ -77,11 +78,16 @@ class ScalarHypervectorEmbeddingBase:
 # ----------------------------
 # Linear NumberLine
 # ----------------------------
-def linear_sequence_gen(max_number: int, start_vec: np.ndarray, rng: Optional[np.random.Generator] = None) -> List[np.ndarray]:
+def linear_sequence_gen(max_number: int, start_vec: np.ndarray, rng: Optional[np.random.Generator] = None, vsa_kwargs = None) -> List[np.ndarray]:
     """
     Keeping this as a module definition for backwards compatibility to legacy version.
 
     """
+    if vsa_kwargs is None:
+        vsa_type: VsaType = VsaType.BSC
+    else:
+        vsa_type = vsa_kwargs["vsa_type"]
+
     if rng is None:
         rng = np.random.default_rng()
 
@@ -112,6 +118,11 @@ def linear_sequence_gen(max_number: int, start_vec: np.ndarray, rng: Optional[np
             v[idx] = ~v[idx]
             cursor += k
         seq.append(v.copy())
+
+    seq = VsaBase(seq, vsa_type=VsaType.BSC)
+    if vsa_type != VsaType.BSC:
+        seq = to_vsa_type(seq, new_vsa_type=vsa_type)
+
     return seq
 
 
@@ -119,7 +130,6 @@ class NumberLine(ScalarHypervectorEmbeddingBase):
     """
     Linear number line (min..max inclusive), with optional quantisation into Q steps.
 
-    This is your current behaviour, cleaned up:
     - build bank using linear_sequence_gen
     - number_to_vec binds bank vector with make_orthogonal
     - number_from_vec unbinds and nearest-neighbour decodes
@@ -159,7 +169,7 @@ class NumberLine(ScalarHypervectorEmbeddingBase):
         zvec_bsc = vsa.to_vsa_type(self.zero_vec, new_vsa_type=VsaType.BSC)
 
         steps = self.Q if self.Q else (self.max_num - self.min_num)
-        bank_bsc = linear_sequence_gen(steps, zvec_bsc, rng=self.rng)  # list of bool vecs
+        bank_bsc = linear_sequence_gen(steps, zvec_bsc, rng=self.rng, vsa_kwargs=vsa_kwargs)  # list of bool vecs
 
         self.number_vecs = vsa.to_vsa_type(
             VsaBase(bank_bsc, vsa_type=VsaType.BSC),
