@@ -1,5 +1,7 @@
 import math
 
+import numpy as np
+
 from .vsatype import *
 from .tern import Tern
 from .ternzero import TernZero
@@ -69,7 +71,7 @@ class BSC(VsaBase):
         """
         assert a.vsa_type == b.vsa_type, "Mismatch vsa_types"
         if a.vsa_type == VsaType.BSC and a.vsa_type == b.vsa_type:
-            return np.logical_xor(a, b) * 1
+            return np.bitwise_xor(a, b)
         raise ValueError("Mismatch vsa_types")
 
     @classmethod
@@ -119,7 +121,7 @@ class BSC(VsaBase):
         """
         assert a.vsa_type == b.vsa_type, "Mismatch vsa_types"
         if b.vsa_type == VsaType.BSC:
-            return float(np.count_nonzero(np.logical_xor(a, b))) / len(a)
+            return float(np.count_nonzero(np.bitwise_xor(a, b))) / len(a)
         raise ValueError("Mismatch vsa_types")
 
     @classmethod

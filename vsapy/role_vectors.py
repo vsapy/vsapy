@@ -80,7 +80,7 @@ class RoleVecs(object):
         self.matchval = randvec(veclen, vsa_type=vsa_type, **kwargs)  # The hsim match quality in a reply msg
         self.vec_count = randvec(veclen, vsa_type=vsa_type, **kwargs)  # The number of vecs embedded in this vector
         self.stopvec = randvec(veclen, vsa_type=vsa_type, **kwargs)  # The chunk stop vector
-        self.permVecs = tuple([randvec(veclen, vsa_type=vsa_type, **kwargs) for _ in range(150)])
+        self.permVecs = tuple([randvec(veclen, vsa_type=vsa_type, **kwargs) for _ in range(300)])
         self.parent = randvec(veclen, vsa_type=vsa_type, **kwargs)  # Used in DAG encoding
         self.child = randvec(veclen, vsa_type=vsa_type, **kwargs)  # Used in DAG encoding
         # -------------------------------------------------------------------------

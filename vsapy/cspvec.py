@@ -38,6 +38,7 @@ class CSPvec(RawVec):
             veclist = [c.myvec for c in veclist]
         else:
             self.__terminal_node = True
+            self.chunklist = chunks  # the real vectors, for debug and possible use in clean up
             # veclist = veclist
 
         self.chunksize = len(veclist)
@@ -50,7 +51,6 @@ class CSPvec(RawVec):
         with CSPvec.mythreadlock:
             CSPvec.next_chunk_id += 1
 
-        self.chunklist = chunks  # the real vectors, for debug and possible use in clean up
         self.start_tag_vec = None
 
         # The stopvec is made from the last vector in the list this ensures that we get better matches
@@ -364,8 +364,11 @@ class CSPvec(RawVec):
         nextvec = np.roll(bind(pvec, self.commandvec), -1)
         return nextvec
 
-    def check_for_stopvec(self, invec):
-        return hsim(self.stopvec, invec) > self.match_theshold(invec)
+    def check_for_stopvec(self, invec, threshold = 0.0):
+        if threshold >0:
+            return hsim(self.stopvec, invec) > threshold
+        else:
+            return hsim(self.stopvec, invec) > self.match_theshold(invec)
 
     def check_for_start_tag_vec(self, invec):
         return hsim(self.roles.tvec_tag, invec) > self.match_theshold(invec)

@@ -218,33 +218,35 @@ def normalize(a, *args, **kwargs):
     """
     return a.normalize(a, *args, **kwargs)
 
-
 def bind(a, b):
     """
-    Comutative binding operator
-    :param a: VSA vec
-    :param b: VSA vec
+    Commutative binding operator.
+    Supports:
+      - vec vs vec  -> single vector
+      - vec vs bank -> bank
+      - bank vs vec -> bank
+
     :return: vector associating/coupling a to b that is dissimilar to both a and b.
              In most cases bind(a, b) is analogues to multiplication, e.g. bind(3,4)=>12.
              If we know one of the operands we can recover the other using unbind(a,b) e.g unbind(3,12)=>4
     """
-    if a.validate_operand(b):
-        a1, b1 = VsaBase.trunc_vecs_to_same_len(a, b)
-        return a.bind(a1, b1)
+    return _apply_bindwise("bind", a, b)
 
 
 def unbind(a, b):  # actually bind/unbind for binary and ternary vecs
     """
-    Comutative unbinding operator. Decouples a from b and vice-versa. The result
-    :param a: VSA vec
-    :param b: VSA vec
-    :return: reverses a bind operation. If z = bind(x, y) then x = unbind(y, z) and y = unbind(x, z).
-             The return is orthogonal to x nd y if x and y have not been previously associated with bind(x, y).
-    """
-    if a.validate_operand(b):
-        a1, b1 = VsaBase.trunc_vecs_to_same_len(a, b)
-        return a.unbind(a1, b1)
+    Commutative unbinding operator.
 
+    Supports:
+      - vec vs vec  -> single vector
+      - vec vs bank -> bank
+      - bank vs vec -> bank
+
+    :return: vector associating/coupling a to b that is dissimilar to both a and b.
+             In most cases bind(a, b) is analogues to multiplication, e.g. bind(3,4)=>12.
+             If we know one of the operands we can recover the other using unbind(a,b) e.g unbind(3,12)=>4
+    """
+    return _apply_bindwise("unbind", a, b)
 
 def cosine(a, b):
     """
@@ -689,6 +691,42 @@ def hdist(a, b):
     :return:
     """
     return _apply_pairwise("hdist", a, b)
+
+
+def _apply_bindwise(op_name: str, a, b):
+    """
+    Apply bind-like ops (bind / unbind) across banks.
+
+    Rules:
+      - vec vs vec  -> single vector
+      - vec vs bank -> bank of vectors
+      - bank vs vec -> bank of vectors
+      - bank vs bank -> not supported here
+    """
+    a_is_bank = _is_bank(a)
+    b_is_bank = _is_bank(b)
+
+    if (not a_is_bank) and (not b_is_bank):
+        if a.validate_operand(b):
+            a1, b1 = VsaBase.trunc_vecs_to_same_len(a, b)
+            return getattr(a, op_name)(a1, b1)
+        return None
+
+    def _one(x, y):
+        if x.validate_operand(y):
+            x1, y1 = VsaBase.trunc_vecs_to_same_len(x, y)
+            return getattr(x, op_name)(x1, y1)
+        return None
+
+    if a_is_bank and (not b_is_bank):
+        out = [_one(_bank_get(a, i), b) for i in range(_bank_len(a))]
+        return np.stack(out, axis=0)
+
+    if (not a_is_bank) and b_is_bank:
+        out = [_one(a, _bank_get(b, i)) for i in range(_bank_len(b))]
+        return np.stack(out, axis=0)
+
+    raise NotImplementedError(f"{op_name} does not currently support bank vs bank.")
 
 
 # def sum(ndarray, *args, **kwargs):

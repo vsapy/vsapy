@@ -43,6 +43,7 @@ from .vsapy import (
 )
 
 from .bag import *
+from .cspvec import CSPvec
 from .vsa_tokenizer import VsaTokenizer
 
 # ---------------------------------------------------------------------
