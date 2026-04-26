@@ -2,6 +2,8 @@
 
 ⚠️ **Version 0.10+ Update — Breaking Changes**
 
+For a code-structure overview, see [ARCHITECTURE.md](/Users/chrissimpkin/Documents/Nexus/vsapy/ARCHITECTURE.md).
+
 ---
 
 ## Python Version Requirement (Breaking Change)
